@@ -1,9 +1,27 @@
+# =========================
+# Python
+# =========================
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
 .Python
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+ENV/
+lohi_discovery/
+
+# =========================
+# Build / packaging
+# =========================
 build/
-develop-eggs/
 dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -17,25 +35,68 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-venv/
-ENV/
-env/
-.venv
+
+# =========================
+# IDE / Editor
+# =========================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# =========================
+# OS
+# =========================
 .DS_Store
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# (NON ignorare *.ipynb se li usi)
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+
+# =========================
+# Data (customize!)
+# =========================
 data/raw/
+data/processed/
+data/interim/
+
+# =========================
+# Results / outputs
+# =========================
 results/
+outputs/
+logs/
+runs/
+
+# =========================
+# ML models / artifacts
+# =========================
 *.pkl
 *.pt
 *.pth
-runs/
-.ipynb_checkpoints/
-*.ipynb
-.env
-.env.local
-lohi_discovery/
-.gitkeep
+*.ckpt
+*.h5
+
+# numpy
+*.npy
+*.npz
+
+# large tabular
+*.parquet
+
+# =========================
+# Misc
+# =========================
+coverage/
+htmlcov/
+.cache/
