@@ -21,7 +21,6 @@ venv/
 ENV/
 env/
 .venv
-.vscode/
 .idea/
 *.swp
 *.swo
