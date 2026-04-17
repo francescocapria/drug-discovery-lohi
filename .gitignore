@@ -37,3 +37,5 @@ runs/
 *.ipynb
 .env
 .env.local
+lohi_discovery/
+.gitkeep
