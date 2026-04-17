@@ -1,0 +1,11 @@
+{
+  "python.defaultInterpreterPath": "/home/f.capria/miniconda3/envs/discovery-drugs-ml/bin/python",
+  "python.linting.enabled": true,
+  "python.formatting.provider": "black",
+  "jupyter.kernelProviderAssociations": [
+    {
+      "languageId": "python",
+      "kernelProvider": "jupyter.kernelProviderType.discovery"
+    }
+  ]
+}
