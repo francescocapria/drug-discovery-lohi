@@ -21,10 +21,12 @@ venv/
 ENV/
 env/
 .venv
+.vscode/
 .idea/
 *.swp
 *.swo
 *~
+.DS_Store
 data/raw/
 results/
 *.csv
