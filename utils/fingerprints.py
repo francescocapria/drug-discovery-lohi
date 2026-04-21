@@ -20,19 +20,19 @@ from typing import List, Optional
 
 import numpy as np
 from rdkit import Chem, DataStructs
-from rdkit.Chem import AllChem, MACCSkeys, Descriptors
-from rdkit.ML.Descriptors import MoleculeDescriptors
+from rdkit.Chem import MACCSkeys, Descriptors
+from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
 
 logger = logging.getLogger(__name__)
 
 
 def smiles_to_mols(smiles_list: List[str]):
-    """Convert a list of SMILES strings into RDKit Mol objects."""
     mols = []
     for i, smi in enumerate(smiles_list):
         mol = Chem.MolFromSmiles(smi)
         if mol is None:
-            raise ValueError(f"Invalid SMILES at index {i}: {smi}")
+            logger.warning(f"Skipping invalid SMILES at index {i}: {smi[:50]}")
+            mol = Chem.MolFromSmiles("C")  
         mols.append(mol)
     return mols
 
@@ -41,10 +41,11 @@ def compute_ecfp4(smiles_list: List[str], n_bits: int = 1024) -> np.ndarray:
     """Compute ECFP4 (Morgan radius=2) fingerprints."""
     mols = smiles_to_mols(smiles_list)
     X = np.zeros((len(mols), n_bits), dtype=np.uint8)
+    gen = GetMorganGenerator(radius=2, fpSize=n_bits)
 
     for i, mol in enumerate(mols):
-        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=n_bits)
-        DataStructs.ConvertToNumpyArray(fp, X[i])
+        fp = gen.GetFingerprintAsNumPy(mol)
+        X[i] = fp
 
     return X
 

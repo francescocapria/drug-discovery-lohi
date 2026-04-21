@@ -3,13 +3,11 @@ Nested cross-validation pipeline for the Lo-Hi benchmark.
 
 Implements the proper methodology:
 - Outer loop: 3 pre-defined folds (from Steshin's splitting)
-- Inner loop: k-fold stratified CV on train_i for hyperparameter selection
+- Inner loop: k-fold CV on train_i for hyperparameter selection
+  (StratifiedKFold for Hi, KFold for Lo)
 - Retrain on full train_i with best params
 - Single evaluation on test_i
 
-For neural networks with early stopping:
-- Inner CV determines both best hyperparams AND avg best epoch
-- Retrain on full train_i for avg_best_epoch epochs (no val leakage)
 """
 
 import time
@@ -20,9 +18,9 @@ from sklearn.model_selection import (
     StratifiedKFold,
     GridSearchCV,
     RandomizedSearchCV,
+    KFold
 )
 from sklearn.base import BaseEstimator
-
 from utils.fingerprints import compute_fingerprints
 from utils.metrics import get_hi_metrics, get_lo_metrics, aggregate_fold_metrics
 from utils.io_utils import (
@@ -46,7 +44,7 @@ def _inner_cv_sklearn(
     y_train: np.ndarray,
     estimator: BaseEstimator,
     param_grid: dict,
-    inner_k: int = 3,
+    inner_k: int = 2,
     scoring: str = "average_precision",
     search_strategy: str = "grid",
     n_iter: int = 50,
@@ -60,9 +58,11 @@ def _inner_cv_sklearn(
     (best_estimator, best_params, best_inner_score)
         best_estimator is already refit on the full X_train.
     """
-    inner_cv = StratifiedKFold(
-        n_splits=inner_k, shuffle=True, random_state=random_state
-    )
+
+    if np.unique(y_train).shape[0] == 2:  # classificazione binaria → Hi
+        inner_cv = StratifiedKFold(n_splits=inner_k, shuffle=True, random_state=random_state)
+    else:  # regressione/ranking → Lo
+        inner_cv = KFold(n_splits=inner_k, shuffle=True, random_state=random_state)
 
     if search_strategy == "random":
         search = RandomizedSearchCV(
@@ -109,7 +109,7 @@ def run_single_fold(
     model_name: str,
     estimator_factory: Callable[[], BaseEstimator],
     param_grid: dict,
-    inner_k: int = 3,
+    inner_k: int = 2,
     scoring: str = "average_precision",
     search_strategy: str = "grid",
     n_iter: int = 50,
@@ -118,25 +118,6 @@ def run_single_fold(
 ) -> Dict[str, Any]:
     """
     Execute one outer fold: featurize → inner CV → retrain → evaluate → save.
-
-    Parameters
-    ----------
-    train_df, test_df : DataFrame
-        Must have 'smiles' and 'value' columns.
-    fold_idx : int
-        Which outer fold (1, 2, or 3).
-    task : str
-        "hi" or "lo".
-    fp_type : str
-        Fingerprint type key (e.g. "ecfp4").
-    model_name : str
-        Short model name (e.g. "knn", "svm", "gb").
-    estimator_factory : callable
-        Returns a fresh (unfitted) sklearn estimator.
-    param_grid : dict
-        Hyperparameter search space.
-    save_results : bool
-        Whether to save predictions and params to disk.
 
     Returns
     -------
@@ -226,7 +207,7 @@ def run_nested_cv(
     model_name: str,
     estimator_factory: Callable[[], BaseEstimator],
     param_grid: dict,
-    inner_k: int = 3,
+    inner_k: int = 2,
     scoring: str = "average_precision",
     search_strategy: str = "grid",
     n_iter: int = 50,
@@ -236,8 +217,6 @@ def run_nested_cv(
 ) -> Dict[str, Any]:
     """
     Run the full nested cross-validation across all outer folds.
-
-    This is the main entry point for running an experiment.
 
     Returns
     -------

@@ -2,7 +2,7 @@
 Main training script 
 
 Usage example:
-    python training/train_model.py --config configs/knn_ecfp4_drd2_hi.yaml
+    python training/train_model.py --config configs/hi/drd2/knn_ecfp4_drd2_hi.yaml
 
 This script:
 1. Loads the YAML config of the project
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Model registry
 # ---------------------------------------------------------------------------
 
-def get_estimator_factory(model_selected: dict):
+def get_estimator_factory(model_selected: dict, task: str):
     """
     Map the model section config to an sklearn estimator factory 
     
@@ -68,17 +68,29 @@ def get_estimator_factory(model_selected: dict):
             return RandomForestClassifier(**fixed)
         return factory
 
-    elif name == "mlp":
-        from sklearn.neural_network import MLPClassifier
+    elif name == "lr":
+        from sklearn.linear_model import LogisticRegression
         def factory():
-            return MLPClassifier(**fixed)
+            return LogisticRegression(max_iter=1000, **fixed)
+        return factory
+    
+    elif name == "dt":
+        from sklearn.tree import DecisionTreeClassifier
+        def factory():
+            return DecisionTreeClassifier(**fixed)
         return factory
 
     elif name == "dummy":
-        from sklearn.dummy import DummyClassifier
-        def factory():
-            return DummyClassifier(**fixed)
-        return factory
+        if task == "lo":
+            from sklearn.dummy import DummyRegressor
+            def factory():
+                return DummyRegressor(strategy="mean")
+            return factory
+        else:
+            from sklearn.dummy import DummyClassifier
+            def factory():
+                return DummyClassifier(**fixed)
+            return factory
 
     elif name == "xgb":
         from xgboost import XGBClassifier
@@ -141,7 +153,7 @@ def main():
         return
 
     # Build estimator factory
-    factory = get_estimator_factory(cfg["model"])
+    factory = get_estimator_factory(cfg["model"], cfg["experiment"]["task"])
 
     # Run nested CV 
     results = run_nested_cv(

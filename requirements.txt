@@ -1,5 +1,14 @@
-# LOHI - Requirements
-# Install: pip install -r requirements.txt
+# THESIS_LOHI — Requirements
+# Python 3.11 recommended
+#
+# Recommended install order:
+#   conda create -n lohi python=3.11 -y
+#   conda activate lohi
+#   conda install -c conda-forge rdkit scikit-learn scipy pandas numpy pyyaml matplotlib seaborn jupyter ipykernel -y
+#   pip install xgboost lightgbm
+#
+# Note: rdkit is best installed via conda-forge, not pip.
+# Note: deepchem NOT needed — BEDROC via rdkit.ML.Scoring.Scoring.CalcBEDROC
 
 # --- Core scientific stack ---
 numpy>=1.24
@@ -7,20 +16,20 @@ pandas>=2.0
 scipy>=1.10
 scikit-learn>=1.3
 
-# --- Chemistry ---
-rdkit>=2023.03.1          # molecular fingerprints, descriptors, SMILES parsing
+# --- Chemistry (install via conda-forge, see above) ---
+# rdkit>=2024.03
 
 # --- Config ---
-pyyaml>=6.0               # YAML config loading
+pyyaml>=6.0
 
-# --- Boosting models (optional but recommended) ---
+# --- Boosting models ---
 xgboost>=2.0
 lightgbm>=4.0
 
-# --- Visualization (for notebooks/EDA) ---
+# --- Visualization ---
 matplotlib>=3.7
 seaborn>=0.12
 
-# --- Jupyter (for notebooks/) ---
+# --- Jupyter ---
 jupyter>=1.0
 ipykernel>=6.0

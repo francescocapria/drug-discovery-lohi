@@ -1,5 +1,5 @@
 """
-THESIS_LOHI - Utility library for Lo-Hi benchmark experiments.
+Utility library for Lo-Hi benchmark experiments.
 
 Modules:
     fingerprints    - Molecular featurization (ECFP4, MACCS, RDKit topo, RDKit descriptors)
@@ -9,7 +9,7 @@ Modules:
     config_loader   - YAML config parsing and validation
 """
 
-from utils.fingerprints import compute_fingerprints, FINGERPRINT_REGISTRY
+from utils.fingerprints import compute_fingerprints
 from utils.metrics import get_hi_metrics, get_lo_metrics
 from utils.cv_pipeline import run_nested_cv
 from utils.io_utils import load_fold, save_predictions, save_params, get_results_dir

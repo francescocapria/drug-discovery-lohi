@@ -5,7 +5,7 @@ Hi task:
 - PR AUC
 - ROC AUC
 - BEDROC
-- F1 at threshold 0.5
+- F1 at threshold 0.5 (only if scores are probabilities)
 - positive rate
 
 Lo task:
@@ -27,8 +27,9 @@ from sklearn.metrics import (
     r2_score,
     mean_absolute_error,
 )
-from deepchem.metrics import bedroc_score
-
+from rdkit.ML.Scoring.Scoring import CalcBEDROC
+import warnings
+from scipy.stats import ConstantInputWarning
 
 # ---------------------------------------------------------------------------
 # Hi metrics (Hit Identification — binary classification)
@@ -36,7 +37,7 @@ from deepchem.metrics import bedroc_score
 
 def get_hi_metrics(
     y_true: np.ndarray,
-    y_pred_proba: np.ndarray,
+    y_score: np.ndarray,
 ) -> Dict[str, float]:
     """
     Compute metrics for the Hi (Hit Identification) task.
@@ -45,8 +46,10 @@ def get_hi_metrics(
     ----------
     y_true : array-like of shape (n_samples,)
         Ground truth binary labels (0/1).
-    y_pred_proba : array-like of shape (n_samples,)
-        Predicted probability (or score) for the positive class.
+    y_score : array-like of shape (n_samples,)
+        Predicted score for the positive class.
+        This can be a probability, a decision function score,
+        or any real-valued ranking score.
 
     Returns
     -------
@@ -54,30 +57,41 @@ def get_hi_metrics(
         Dictionary containing Hi evaluation metrics.
     """
     y_true = np.asarray(y_true, dtype=int)
-    y_pred_proba = np.asarray(y_pred_proba, dtype=float)
+    y_score = np.asarray(y_score, dtype=float)
 
-    pr_auc = average_precision_score(y_true, y_pred_proba)
+    pr_auc = average_precision_score(y_true, y_score)
 
-    # try/except to manage cases with no active molecules
     try:
-        roc_auc = roc_auc_score(y_true, y_pred_proba)
+        roc_auc = roc_auc_score(y_true, y_score)
     except ValueError:
         roc_auc = float("nan")
 
-    y_pred_binary = (y_pred_proba >= 0.5).astype(int)
-    f1 = f1_score(y_true, y_pred_binary, zero_division=0.0)
-
-    two_class_prob = np.column_stack([1.0 - y_pred_proba, y_pred_proba])
+    # BEDROC requires a sorted 2D array [score, label]
     try:
-        bedroc = bedroc_score(y_true, two_class_prob, alpha=70.0)
+        scores = np.column_stack([y_score, y_true])
+
+        # for identical scores
+        rng = np.random.default_rng(seed=42)
+        tiebreak = rng.uniform(0, 1e-9, size=len(y_score))
+
+        order = np.argsort(-(y_score + tiebreak))
+        scores_sorted = scores[order]
+
+        bedroc = CalcBEDROC(scores_sorted, col=1, alpha=70.0)
     except Exception:
         bedroc = float("nan")
+
+    if np.all((y_score >= 0.0) & (y_score <= 1.0)):
+        y_pred_binary = (y_score >= 0.5).astype(int)
+        f1 = f1_score(y_true, y_pred_binary, zero_division=0.0)
+    else:
+        f1 = float("nan")
 
     return {
         "pr_auc": round(pr_auc, 4),
         "roc_auc": round(roc_auc, 4),
         "bedroc": round(bedroc, 4),
-        "f1_at_05": round(f1, 4),
+        "f1_at_05": round(f1, 4) if not np.isnan(f1) else float("nan"),
         "positive_rate": round(y_true.mean(), 4),
     }
 
@@ -121,13 +135,15 @@ def get_lo_metrics(
     for cluster in unique_clusters:
         mask = cluster_ids == cluster
 
-        if mask.sum() < 2:
+        if mask.sum() < 3:
             continue
 
         y_cluster = y_true[mask]
         pred_cluster = y_pred[mask]
 
-        rho, _ = spearmanr(y_cluster, pred_cluster)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ConstantInputWarning)
+            rho, _ = spearmanr(y_cluster, pred_cluster)
         if np.isnan(rho):
             rho = 0.0
         spearman_scores.append(rho)
@@ -188,6 +204,7 @@ def aggregate_fold_metrics(
             metrics[key]
             for metrics in fold_metrics
             if isinstance(metrics[key], (int, float, np.floating))
+            and not np.isnan(metrics[key])
         ]
 
         if len(values) > 0:
