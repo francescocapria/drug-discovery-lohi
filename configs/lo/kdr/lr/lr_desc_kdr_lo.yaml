@@ -1,0 +1,18 @@
+experiment:
+  name: lr_desc_kdr_lo
+  task: lo
+  dataset: kdr
+
+fingerprint:
+  type: rdkit_desc
+
+model:
+  name: linreg
+  search:
+    fit_intercept: [true, false]
+
+cv:
+  inner_k: 2
+  scoring: neg_mean_absolute_error
+  search_strategy: grid
+  random_state: 42

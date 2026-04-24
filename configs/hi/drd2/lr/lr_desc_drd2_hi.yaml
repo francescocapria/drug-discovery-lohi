@@ -1,0 +1,24 @@
+experiment:
+  name: lr_desc_drd2_hi
+  task: hi
+  dataset: drd2
+
+fingerprint:
+  type: rdkit_desc
+
+model:
+  name: lr
+  fixed:
+    max_iter: 15000
+    random_state: 42
+    solver: saga
+  search:
+    C: [0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+    l1_ratio: [0.0, 1.0]
+    class_weight: [null, balanced]
+
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42

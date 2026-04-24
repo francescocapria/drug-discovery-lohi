@@ -1,0 +1,24 @@
+experiment:
+  name: dt_ecfp4_kdr_lo
+  task: lo
+  dataset: kdr
+
+fingerprint:
+  type: ecfp4
+
+model:
+  name: dt
+  fixed:
+    random_state: 42
+  search:
+    max_depth: [3, 5, 7, 10, 15, 20, null]
+    min_samples_split: [2, 5, 10, 20]
+    min_samples_leaf: [1, 2, 5, 10]
+    criterion: [squared_error, absolute_error]
+    max_features: [sqrt, log2, null]
+
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42

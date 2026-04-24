@@ -1,0 +1,23 @@
+experiment:
+  name: lr_desc_kdr_hi
+  task: hi
+  dataset: kdr
+
+fingerprint:
+  type: rdkit_desc
+
+model:
+  name: lr
+  fixed:
+    max_iter: 15000
+    random_state: 42
+    solver: saga
+  search:
+    C: [0.01, 0.1, 1.0]
+    l1_ratio: [0.0]
+
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42

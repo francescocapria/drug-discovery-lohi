@@ -1,0 +1,22 @@
+experiment:
+  name: knn_ecfp4_kdr_hi
+  task: hi
+  dataset: kdr
+
+fingerprint:
+  type: ecfp4
+
+model:
+  name: knn
+  fixed:
+    algorithm: auto
+  search:
+    n_neighbors: [3, 5, 7, 11, 15, 21, 31, 51, 75, 101]
+    metric: [jaccard]
+    weights: [uniform, distance]
+
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42
