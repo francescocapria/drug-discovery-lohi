@@ -117,7 +117,7 @@ def get_results_dir(
     
     Example: results/hi/drd2/knn_ecfp4/
     """
-    results_dir = PROJECT_ROOT / "results" / task / dataset / f"{model_name}_{fp_type}"
+    results_dir = PROJECT_ROOT / "results" / task / dataset / model_name
     results_dir.mkdir(parents=True, exist_ok=True)
     return results_dir
 

@@ -198,6 +198,14 @@ def main():
 
     # Load config (transform yaml file)
     cfg = load_config(args.config)
+    config_name = Path(args.config).stem
+    
+    task = cfg["experiment"]["task"] 
+
+    if config_name.endswith(f"_{task}"):
+        model_name = config_name[:-(len(task) + 1)]
+    else:
+        model_name = config_name  
 
     fp_config = cfg["fingerprint"]
     if "types" in fp_config:
@@ -226,7 +234,7 @@ def main():
             task=cfg["experiment"]["task"],
             dataset=cfg["experiment"]["dataset"],
             fp_type=fp_type,
-            model_name=cfg["model"]["name"],
+            model_name=model_name,
             estimator_factory=factory,
             param_grid=param_grid,
             inner_k=cfg["cv"]["inner_k"],
