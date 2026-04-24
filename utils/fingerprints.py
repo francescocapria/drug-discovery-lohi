@@ -63,19 +63,12 @@ def compute_maccs(smiles_list: List[str]) -> np.ndarray:
 
 
 def compute_rdkit_descriptors(smiles_list: List[str]) -> np.ndarray:
-    """Compute RDKit 2D descriptors (~200 features). Useful for three based models"""
-
     mols = smiles_to_mols(smiles_list)
+    X = np.array([list(Descriptors.CalcMolDescriptors(mol).values()) for mol in mols], dtype=np.float64)
 
-    desc_names = [name for name, _ in Descriptors.descList]
-    calc = MoleculeDescriptors.MolecularDescriptorCalculator(desc_names)
-
-    X = np.array([calc.CalcDescriptors(mol) for mol in mols], dtype=np.float64)
-
-    # Replace NaN/Inf with column median
     for j in range(X.shape[1]):
         col = X[:, j]
-        mask = ~np.isfinite(col) # True for NaN or Inf values
+        mask = ~np.isfinite(col)
         if mask.any():
             median = np.nanmedian(col)
             col[mask] = median if not np.isnan(median) else 0.0

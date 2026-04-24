@@ -74,9 +74,10 @@ def load_config(config_path: str) -> Dict[str, Any]:
         raise ValueError(f"experiment.task must be 'hi' or 'lo', got '{exp['task']}'")
 
     # Validate fingerprint section
+    # Validate fingerprint section
     fp = cfg["fingerprint"]
-    if "type" not in fp:
-        raise ValueError("fingerprint.type is required")
+    if "type" not in fp and "types" not in fp:
+        raise ValueError("fingerprint.type or fingerprint.types is required")
 
     # Validate model section
     model = cfg["model"]
@@ -89,7 +90,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
     logger.info(
         f"Loaded config: {exp.get('name', config_path.stem)} | "
-        f"model={model['name']} fp={fp['type']} "
+        f"model={model['name']} fp={fp.get('type', fp.get('types'))} "
         f"task={exp['task']} dataset={exp['dataset']}"
     )
 

@@ -2,7 +2,7 @@
 Main training script 
 
 Usage example:
-    python training/train_model.py --config configs/hi/drd2/knn_ecfp4_drd2_hi.yaml
+    python training/train_model.py --config configs/hi/drd2/knn/knn_ecfp4_drd2_hi.yaml
 
 This script:
 1. Loads the YAML config of the project
@@ -15,6 +15,8 @@ import sys
 import argparse
 import logging
 from pathlib import Path
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -31,10 +33,21 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Tanimoto kernel (for SVM on binary fingerprints)
+# ---------------------------------------------------------------------------
+
+def tanimoto_kernel(X, Y):
+    XY = X @ Y.T
+    X_sq = (X ** 2).sum(axis=1).reshape(-1, 1)
+    Y_sq = (Y ** 2).sum(axis=1).reshape(-1, 1)
+    return XY / (X_sq + Y_sq.T - XY)
+
+
+# ---------------------------------------------------------------------------
 # Model registry
 # ---------------------------------------------------------------------------
 
-def get_estimator_factory(model_selected: dict, task: str):
+def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4"):
     """
     Map the model section config to an sklearn estimator factory 
     
@@ -45,15 +58,40 @@ def get_estimator_factory(model_selected: dict, task: str):
     fixed = model_selected.get("fixed", {})
 
     if name == "knn":
-        from sklearn.neighbors import KNeighborsClassifier
-        def factory():
-            return KNeighborsClassifier(**fixed)
-        return factory
+        if task == "lo":
+            from sklearn.neighbors import KNeighborsRegressor
+            def factory():
+                return KNeighborsRegressor(**fixed)
+            return factory
+        else:
+            from sklearn.neighbors import KNeighborsClassifier
+            def factory():
+                return KNeighborsClassifier(**fixed)
+            return factory
 
     elif name == "svm":
-        from sklearn.svm import SVC
+        from sklearn.svm import SVC, SVR
+
+        # Scaling for continuous descriptors (rdkit_desc) and for Lo task
+        use_scaling = fp_type == "rdkit_desc" or task == "lo"
+
+        # Tanimoto kernel for binary fingerprints
+        kernel_type = fixed.get("kernel")
+        if kernel_type == "tanimoto":
+            fixed = {k: v for k, v in fixed.items() if k != "kernel"}
+
+        SvmClass = SVR if task == "lo" else SVC
+
         def factory():
-            return SVC(**fixed)
+            if kernel_type == "tanimoto":
+                model = SvmClass(kernel=tanimoto_kernel, **fixed)
+            else:
+                model = SvmClass(**fixed)
+
+            if use_scaling:
+                return Pipeline([("scaler", StandardScaler()), ("model", model)])
+            return model
+
         return factory
 
     elif name == "gb":
@@ -69,16 +107,28 @@ def get_estimator_factory(model_selected: dict, task: str):
         return factory
 
     elif name == "lr":
-        from sklearn.linear_model import LogisticRegression
-        def factory():
-            return LogisticRegression(max_iter=1000, **fixed)
-        return factory
-    
+        if task == "lo":
+            from sklearn.linear_model import LinearRegression
+            def factory():
+                return LinearRegression(**fixed)
+            return factory
+        else:
+            from sklearn.linear_model import LogisticRegression
+            def factory():
+                return LogisticRegression(**fixed)
+            return factory
+
     elif name == "dt":
-        from sklearn.tree import DecisionTreeClassifier
-        def factory():
-            return DecisionTreeClassifier(**fixed)
-        return factory
+        if task == "lo":
+            from sklearn.tree import DecisionTreeRegressor
+            def factory():
+                return DecisionTreeRegressor(**fixed)
+            return factory
+        else:
+            from sklearn.tree import DecisionTreeClassifier
+            def factory():
+                return DecisionTreeClassifier(**fixed)
+            return factory
 
     elif name == "dummy":
         if task == "lo":
@@ -111,7 +161,7 @@ def get_estimator_factory(model_selected: dict, task: str):
     else:
         raise ValueError(
             f"Unknown model name: '{name}'. "
-            f"Available: knn, svm, gb, rf, mlp, dummy, xgb, lgbm"
+            f"Available: knn, svm, gb, rf, lr, linreg, dt, dummy, xgb, lgbm"
         )
 
 
@@ -146,42 +196,62 @@ def main():
     # Load config (transform yaml file)
     cfg = load_config(args.config)
 
+    # Support both single fingerprint (type) and multiple fingerprints (types)
+    fp_config = cfg["fingerprint"]
+    if "types" in fp_config:
+        fp_list = fp_config["types"]
+    elif "type" in fp_config:
+        fp_list = [fp_config["type"]]
+    else:
+        raise ValueError("Config must have fingerprint.type or fingerprint.types")
+
     # if --dry-run is used, it doesn't train nothing, only check the config. Useful for debug
     if args.dry_run:
         import json
         print(json.dumps(cfg, indent=2))
         return
 
-    # Build estimator factory
-    factory = get_estimator_factory(cfg["model"], cfg["experiment"]["task"])
+    # Run nested CV for each fingerprint
+    for fp_type in fp_list:
+        factory = get_estimator_factory(cfg["model"], cfg["experiment"]["task"], fp_type)
 
-    # Run nested CV 
-    results = run_nested_cv(
-        task=cfg["experiment"]["task"],
-        dataset=cfg["experiment"]["dataset"],
-        fp_type=cfg["fingerprint"]["type"],
-        model_name=cfg["model"]["name"],
-        estimator_factory=factory,
-        param_grid=cfg["model"]["search"],
-        inner_k=cfg["cv"]["inner_k"],
-        scoring=cfg["cv"]["scoring"],
-        search_strategy=cfg["cv"]["search_strategy"],
-        n_iter=cfg["cv"]["n_iter"],
-        random_state=cfg["cv"]["random_state"],
-        folds=args.folds,
-    )
+        # If the estimator is a Pipeline, add "model__" prefix to param_grid keys
+        param_grid = cfg["model"]["search"].copy()
+        if isinstance(factory(), Pipeline):
+            param_grid = {f"model__{k}": v for k, v in param_grid.items()}
 
-    # Summary
-    print("\n" + "=" * 60)
-    print(f"EXPERIMENT COMPLETE: {results['experiment_id']}")
-    print("=" * 60)
-    print(f"\nAggregated test metrics:")
-    for k, v in results["aggregated"].items():
-        print(f"  {k}: {v}")
-    print(f"\nPer-fold best params:")
-    for r in results["fold_results"]:
-        print(f"  Fold {r['fold']}: {r['best_params']}")
-    print()
+        # Build model name including kernel for SVM to avoid overwriting results
+        model_name = cfg["model"]["name"]
+        if model_name == "svm":
+            kernel = cfg["model"]["fixed"].get("kernel", "rbf")
+            model_name = f"svm_{kernel}"
+
+        results = run_nested_cv(
+            task=cfg["experiment"]["task"],
+            dataset=cfg["experiment"]["dataset"],
+            fp_type=fp_type,
+            model_name=model_name,
+            estimator_factory=factory,
+            param_grid=param_grid,
+            inner_k=cfg["cv"]["inner_k"],
+            scoring=cfg["cv"]["scoring"],
+            search_strategy=cfg["cv"]["search_strategy"],
+            n_iter=cfg["cv"]["n_iter"],
+            random_state=cfg["cv"]["random_state"],
+            folds=args.folds,
+        )
+
+        # Summary
+        print("\n" + "=" * 60)
+        print(f"EXPERIMENT COMPLETE: {results['experiment_id']}")
+        print("=" * 60)
+        print(f"\nAggregated test metrics:")
+        for k, v in results["aggregated"].items():
+            print(f"  {k}: {v}")
+        print(f"\nPer-fold best params:")
+        for r in results["fold_results"]:
+            print(f"  Fold {r['fold']}: {r['best_params']}")
+        print()
 
 
 if __name__ == "__main__":
