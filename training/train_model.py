@@ -72,13 +72,16 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     elif name == "svm":
         from sklearn.svm import SVC, SVR
 
-        # Scaling for continuous descriptors (rdkit_desc) and for Lo task
-        use_scaling = fp_type == "rdkit_desc" or task == "lo"
+        # Scaling only for continuous descriptors (rdkit_desc)
+        use_scaling = fp_type == "rdkit_desc"
 
         # Tanimoto kernel for binary fingerprints
         kernel_type = fixed.get("kernel")
         if kernel_type == "tanimoto":
             fixed = {k: v for k, v in fixed.items() if k != "kernel"}
+            kernel_arg = tanimoto_kernel
+        else:
+            kernel_arg = kernel_type
 
         SvmClass = SVR if task == "lo" else SVC
 
@@ -107,17 +110,17 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
         return factory
 
     elif name == "lr":
-        if task == "lo":
-            from sklearn.linear_model import LinearRegression
-            def factory():
-                return LinearRegression(**fixed)
-            return factory
-        else:
-            from sklearn.linear_model import LogisticRegression
-            def factory():
-                return LogisticRegression(**fixed)
-            return factory
-
+        from sklearn.linear_model import LogisticRegression
+        def factory():
+            return LogisticRegression(**fixed)
+        return factory
+    
+    elif name == "linreg":
+        from sklearn.linear_model import LinearRegression
+        def factory():
+            return LinearRegression(**fixed)
+        return factory
+    
     elif name == "dt":
         if task == "lo":
             from sklearn.tree import DecisionTreeRegressor
@@ -161,7 +164,7 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     else:
         raise ValueError(
             f"Unknown model name: '{name}'. "
-            f"Available: knn, svm, gb, rf, lr, linreg, dt, dummy, xgb, lgbm"
+            f"Available: knn, svm, gb, rf, lr, dt, dummy, xgb, lgbm"
         )
 
 
@@ -196,7 +199,6 @@ def main():
     # Load config (transform yaml file)
     cfg = load_config(args.config)
 
-    # Support both single fingerprint (type) and multiple fingerprints (types)
     fp_config = cfg["fingerprint"]
     if "types" in fp_config:
         fp_list = fp_config["types"]
@@ -204,7 +206,7 @@ def main():
         fp_list = [fp_config["type"]]
     else:
         raise ValueError("Config must have fingerprint.type or fingerprint.types")
-
+    
     # if --dry-run is used, it doesn't train nothing, only check the config. Useful for debug
     if args.dry_run:
         import json
@@ -215,22 +217,16 @@ def main():
     for fp_type in fp_list:
         factory = get_estimator_factory(cfg["model"], cfg["experiment"]["task"], fp_type)
 
-        # If the estimator is a Pipeline, add "model__" prefix to param_grid keys
+        # If the estimator is a Pipeline, add the "model__" prefix to param_grid keys
         param_grid = cfg["model"]["search"].copy()
         if isinstance(factory(), Pipeline):
             param_grid = {f"model__{k}": v for k, v in param_grid.items()}
-
-        # Build model name including kernel for SVM to avoid overwriting results
-        model_name = cfg["model"]["name"]
-        if model_name == "svm":
-            kernel = cfg["model"]["fixed"].get("kernel", "rbf")
-            model_name = f"svm_{kernel}"
 
         results = run_nested_cv(
             task=cfg["experiment"]["task"],
             dataset=cfg["experiment"]["dataset"],
             fp_type=fp_type,
-            model_name=model_name,
+            model_name=cfg["model"]["name"],
             estimator_factory=factory,
             param_grid=param_grid,
             inner_k=cfg["cv"]["inner_k"],
