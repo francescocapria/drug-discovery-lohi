@@ -20,5 +20,5 @@ model:
 cv:
   inner_k: 2
   scoring: neg_mean_absolute_error
-  search_strategy: random
+  search_strategy: grid
   random_state: 42

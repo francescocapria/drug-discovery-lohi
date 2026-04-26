@@ -73,6 +73,8 @@ def compute_rdkit_descriptors(smiles_list: List[str]) -> np.ndarray:
             median = np.nanmedian(col)
             col[mask] = median if not np.isnan(median) else 0.0
 
+    X = np.clip(X, -1e15, 1e15)
+
     return X
 
 

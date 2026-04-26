@@ -72,8 +72,8 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     elif name == "svm":
         from sklearn.svm import SVC, SVR
 
-        # Scaling only for continuous descriptors (rdkit_desc)
-        use_scaling = fp_type == "rdkit_desc"
+        # Scaling only for rdkit_desc
+        use_scaling = fp_type == "rdkit_desc" or task == "lo"
 
         # Tanimoto kernel for binary fingerprints
         kernel_type = fixed.get("kernel")
@@ -98,16 +98,28 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
         return factory
 
     elif name == "gb":
-        from sklearn.ensemble import GradientBoostingClassifier
-        def factory():
-            return GradientBoostingClassifier(**fixed)
-        return factory
+        if task == "lo":
+            from sklearn.ensemble import GradientBoostingRegressor
+            def factory():
+                return GradientBoostingRegressor(**fixed)
+            return factory
+        else:
+            from sklearn.ensemble import GradientBoostingClassifier
+            def factory():
+                return GradientBoostingClassifier(**fixed)
+            return factory
 
     elif name == "rf":
-        from sklearn.ensemble import RandomForestClassifier
-        def factory():
-            return RandomForestClassifier(**fixed)
-        return factory
+        if task == "lo":
+            from sklearn.ensemble import RandomForestRegressor
+            def factory():
+                return RandomForestRegressor(**fixed)
+            return factory
+        else:
+            from sklearn.ensemble import RandomForestClassifier
+            def factory():
+                return RandomForestClassifier(**fixed)
+            return factory
 
     elif name == "lr":
         from sklearn.linear_model import LogisticRegression
@@ -225,10 +237,12 @@ def main():
     for fp_type in fp_list:
         factory = get_estimator_factory(cfg["model"], cfg["experiment"]["task"], fp_type)
 
-        # If the estimator is a Pipeline, add the "model__" prefix to param_grid keys
         param_grid = cfg["model"]["search"].copy()
         if isinstance(factory(), Pipeline):
             param_grid = {f"model__{k}": v for k, v in param_grid.items()}
+
+        # model_name include sia il nome del file config che il fingerprint
+        model_name = f"{config_name}_{fp_type}"
 
         results = run_nested_cv(
             task=cfg["experiment"]["task"],
