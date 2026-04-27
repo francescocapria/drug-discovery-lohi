@@ -4,7 +4,7 @@ experiment:
   dataset: sol
 
 fingerprint:
-  types: [ecfp4, rdkit_desc]
+  types: [maccs]
 
 model:
   name: gb

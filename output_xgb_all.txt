@@ -1,0 +1,101 @@
+00:31:09 [INFO] Loaded config: xgb_drd2_hi | model=xgb fp=['ecfp4', 'maccs', 'rdkit_desc'] task=hi dataset=drd2
+00:31:09 [INFO] 
+############################################################
+00:31:09 [INFO] EXPERIMENT: xgb_drd2_hi_ecfp4 + ecfp4 on hi/drd2
+00:31:09 [INFO] ############################################################
+00:31:09 [INFO] Loaded hi/drd2 fold 1: train=2385, test=1190
+00:31:09 [INFO] 
+============================================================
+00:31:09 [INFO] FOLD 1 | xgb_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+00:31:09 [INFO] ============================================================
+00:31:09 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_1.npz
+00:31:09 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_1.npz
+04:16:54 [INFO]   Inner CV best score: 0.9369
+04:16:54 [INFO]   Inner CV best params: {'subsample': 0.8, 'n_estimators': 100, 'min_child_weight': 1, 'max_depth': 8, 'learning_rate': 0.1, 'gamma': 0.1, 'colsample_bytree': 0.8}
+04:16:55 [INFO]   Train metrics: {'pr_auc': 0.9964, 'roc_auc': 0.9916, 'bedroc': 1.0, 'f1_at_05': 0.9698, 'positive_rate': np.float64(0.7061)}
+04:16:55 [INFO]   Test metrics:  {'pr_auc': 0.6673, 'roc_auc': 0.5729, 'bedroc': 0.6733, 'f1_at_05': 0.6802, 'positive_rate': np.float64(0.6176)}
+04:16:55 [INFO]   Time: 13545.4s
+04:16:55 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/train_1.csv
+04:16:55 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/test_1.csv
+04:16:55 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/params_fold_1.json
+04:16:55 [INFO] Loaded hi/drd2 fold 2: train=2381, test=1194
+04:16:55 [INFO] 
+============================================================
+04:16:55 [INFO] FOLD 2 | xgb_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+04:16:55 [INFO] ============================================================
+04:16:55 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_2.npz
+04:16:55 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_2.npz
+06:37:48 [INFO]   Inner CV best score: 0.9079
+06:37:48 [INFO]   Inner CV best params: {'subsample': 0.7, 'n_estimators': 300, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.1, 'gamma': 0, 'colsample_bytree': 0.7}
+06:37:48 [INFO]   Train metrics: {'pr_auc': 0.9956, 'roc_auc': 0.9924, 'bedroc': 1.0, 'f1_at_05': 0.9634, 'positive_rate': np.float64(0.6342)}
+06:37:48 [INFO]   Test metrics:  {'pr_auc': 0.8658, 'roc_auc': 0.7056, 'bedroc': 0.8849, 'f1_at_05': 0.8045, 'positive_rate': np.float64(0.7613)}
+06:37:48 [INFO]   Time: 8453.3s
+06:37:48 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/train_2.csv
+06:37:48 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/test_2.csv
+06:37:48 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/params_fold_2.json
+06:37:48 [INFO] Loaded hi/drd2 fold 3: train=2384, test=1191
+06:37:48 [INFO] 
+============================================================
+06:37:48 [INFO] FOLD 3 | xgb_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+06:37:48 [INFO] ============================================================
+06:37:48 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_3.npz
+06:37:48 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_3.npz
+08:42:00 [INFO]   Inner CV best score: 0.9256
+08:42:00 [INFO]   Inner CV best params: {'subsample': 0.7, 'n_estimators': 300, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.05, 'gamma': 0.1, 'colsample_bytree': 1.0}
+08:42:00 [INFO]   Train metrics: {'pr_auc': 0.9917, 'roc_auc': 0.9821, 'bedroc': 1.0, 'f1_at_05': 0.9489, 'positive_rate': np.float64(0.6896)}
+08:42:00 [INFO]   Test metrics:  {'pr_auc': 0.7224, 'roc_auc': 0.622, 'bedroc': 0.7936, 'f1_at_05': 0.7429, 'positive_rate': np.float64(0.6507)}
+08:42:00 [INFO]   Time: 7451.7s
+08:42:00 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/train_3.csv
+08:42:00 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/test_3.csv
+08:42:00 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/xgb_drd2_hi_ecfp4/params_fold_3.json
+08:42:00 [INFO] 
+============================================================
+08:42:00 [INFO] AGGREGATED TEST METRICS:
+08:42:00 [INFO]   pr_auc_mean: 0.7518
+08:42:00 [INFO]   pr_auc_std: 0.0837
+08:42:00 [INFO]   roc_auc_mean: 0.6335
+08:42:00 [INFO]   roc_auc_std: 0.0548
+08:42:00 [INFO]   bedroc_mean: 0.7839
+08:42:00 [INFO]   bedroc_std: 0.0867
+08:42:00 [INFO]   f1_at_05_mean: 0.7425
+08:42:00 [INFO]   f1_at_05_std: 0.0507
+08:42:00 [INFO]   positive_rate_mean: 0.6765
+08:42:00 [INFO]   positive_rate_std: 0.0614
+08:42:00 [INFO] ============================================================
+08:42:00 [INFO] NOTE: Best hyperparameters differ across folds (expected in proper nested CV)
+08:42:00 [INFO]   Fold 1: {'subsample': 0.8, 'n_estimators': 100, 'min_child_weight': 1, 'max_depth': 8, 'learning_rate': 0.1, 'gamma': 0.1, 'colsample_bytree': 0.8}
+08:42:00 [INFO]   Fold 2: {'subsample': 0.7, 'n_estimators': 300, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.1, 'gamma': 0, 'colsample_bytree': 0.7}
+08:42:00 [INFO]   Fold 3: {'subsample': 0.7, 'n_estimators': 300, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.05, 'gamma': 0.1, 'colsample_bytree': 1.0}
+08:42:00 [INFO] 
+############################################################
+08:42:00 [INFO] EXPERIMENT: xgb_drd2_hi_maccs + maccs on hi/drd2
+08:42:00 [INFO] ############################################################
+08:42:00 [INFO] Loaded hi/drd2 fold 1: train=2385, test=1190
+08:42:00 [INFO] 
+============================================================
+08:42:00 [INFO] FOLD 1 | xgb_drd2_hi_maccs + maccs | hi/drd2
+08:42:00 [INFO] ============================================================
+08:42:00 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_train_1.npz
+08:42:00 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_test_1.npz
+
+============================================================
+EXPERIMENT COMPLETE: xgb_drd2_hi_ecfp4_ecfp4_hi_drd2
+============================================================
+
+Aggregated test metrics:
+  pr_auc_mean: 0.7518
+  pr_auc_std: 0.0837
+  roc_auc_mean: 0.6335
+  roc_auc_std: 0.0548
+  bedroc_mean: 0.7839
+  bedroc_std: 0.0867
+  f1_at_05_mean: 0.7425
+  f1_at_05_std: 0.0507
+  positive_rate_mean: 0.6765
+  positive_rate_std: 0.0614
+
+Per-fold best params:
+  Fold 1: {'subsample': 0.8, 'n_estimators': 100, 'min_child_weight': 1, 'max_depth': 8, 'learning_rate': 0.1, 'gamma': 0.1, 'colsample_bytree': 0.8}
+  Fold 2: {'subsample': 0.7, 'n_estimators': 300, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.1, 'gamma': 0, 'colsample_bytree': 0.7}
+  Fold 3: {'subsample': 0.7, 'n_estimators': 300, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.05, 'gamma': 0.1, 'colsample_bytree': 1.0}
+

@@ -4,7 +4,7 @@ experiment:
   dataset: hiv
 
 fingerprint:
-  types: [ecfp4, rdkit_desc]
+  types: [maccs]
 
 model:
   name: gb

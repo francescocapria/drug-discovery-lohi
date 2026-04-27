@@ -158,14 +158,16 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
             return factory
 
     elif name == "xgb":
-        from xgboost import XGBClassifier
-        def factory():
-            return XGBClassifier(
-                use_label_encoder=False,
-                eval_metric="logloss",
-                **fixed,
-            )
-        return factory
+        if task == "lo":
+            from xgboost import XGBRegressor
+            def factory():
+                return XGBRegressor(**fixed)
+            return factory
+        else:
+            from xgboost import XGBClassifier
+            def factory():
+                return XGBClassifier(**fixed)
+            return factory
 
     elif name == "lgbm":
         from lightgbm import LGBMClassifier
