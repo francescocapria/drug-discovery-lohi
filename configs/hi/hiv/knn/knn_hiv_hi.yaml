@@ -1,10 +1,10 @@
 experiment:
-  name: knn_maccs_sol_hi
+  name: knn_ecfp4_hiv_hi
   task: hi
-  dataset: sol
+  dataset: hiv
 
 fingerprint:
-  type: maccs
+  types: [ecfp4, maccs]
 
 model:
   name: knn

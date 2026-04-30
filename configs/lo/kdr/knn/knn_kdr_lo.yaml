@@ -1,10 +1,10 @@
 experiment:
-  name: knn_ecfp4_hiv_hi
-  task: hi
-  dataset: hiv
+  name: knn_ecfp4_kdr_lo
+  task: lo
+  dataset: kdr
 
 fingerprint:
-  type: ecfp4
+  types: [ecfp4, maccs]
 
 model:
   name: knn
@@ -12,11 +12,11 @@ model:
     algorithm: auto
   search:
     n_neighbors: [3, 5, 7, 11, 15, 21, 31, 51, 75, 101]
-    metric: [jaccard]
+    metric: [euclidean, minkowski]
     weights: [uniform, distance]
 
 cv:
   inner_k: 2
-  scoring: average_precision
+  scoring: neg_mean_squared_error
   search_strategy: grid
   random_state: 42

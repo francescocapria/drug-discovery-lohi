@@ -75,7 +75,7 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
         # Scaling only for rdkit_desc
         use_scaling = fp_type == "rdkit_desc" or task == "lo"
 
-        # Tanimoto kernel for binary fingerprints
+        # tanimoto kernel 
         kernel_type = fixed.get("kernel")
         if kernel_type == "tanimoto":
             fixed = {k: v for k, v in fixed.items() if k != "kernel"}
@@ -124,13 +124,19 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     elif name == "lr":
         from sklearn.linear_model import LogisticRegression
         def factory():
-            return LogisticRegression(**fixed)
+            model = LogisticRegression(**fixed)
+            if fp_type == "rdkit_desc":
+                return Pipeline([("scaler", StandardScaler()), ("model", model)])
+            return model
         return factory
     
     elif name == "linreg":
         from sklearn.linear_model import LinearRegression
         def factory():
-            return LinearRegression(**fixed)
+            model = LinearRegression(**fixed)
+            if fp_type == "rdkit_desc":
+                return Pipeline([("scaler", StandardScaler()), ("model", model)])
+            return model
         return factory
     
     elif name == "dt":
@@ -169,16 +175,10 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
                 return XGBClassifier(**fixed)
             return factory
 
-    elif name == "lgbm":
-        from lightgbm import LGBMClassifier
-        def factory():
-            return LGBMClassifier(verbose=-1, **fixed)
-        return factory
-
     else:
         raise ValueError(
             f"Unknown model name: '{name}'. "
-            f"Available: knn, svm, gb, rf, lr, dt, dummy, xgb, lgbm"
+            f"Available: knn, svm, gb, rf, lr, dt, dummy, xgb"
         )
 
 

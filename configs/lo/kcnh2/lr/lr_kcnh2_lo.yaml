@@ -4,7 +4,7 @@ experiment:
   dataset: kcnh2
 
 fingerprint:
-  type: rdkit_desc
+  types: [ecfp4, maccs, rdkit_desc]
 
 model:
   name: linreg

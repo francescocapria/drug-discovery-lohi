@@ -1,10 +1,10 @@
 experiment:
-  name: knn_ecfp4_kcnh2_lo
-  task: lo
-  dataset: kcnh2
+  name: knn_ecfp4_kdr_hi
+  task: hi
+  dataset: kdr
 
 fingerprint:
-  type: ecfp4
+  types: [ecfp4, maccs]
 
 model:
   name: knn

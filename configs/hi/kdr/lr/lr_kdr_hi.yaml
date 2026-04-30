@@ -1,10 +1,10 @@
 experiment:
-  name: lr_desc_drd2_hi
+  name: lr_maccs_kdr_hi
   task: hi
-  dataset: drd2
+  dataset: kdr
 
 fingerprint:
-  type: rdkit_desc
+  types: [ecfp4, maccs, rdkit_desc]
 
 model:
   name: lr

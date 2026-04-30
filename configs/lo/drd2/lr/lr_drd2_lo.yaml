@@ -1,10 +1,10 @@
 experiment:
-  name: lr_desc_kdr_lo
+  name: lr_desc_drd2_lo
   task: lo
-  dataset: kdr
+  dataset: drd2
 
 fingerprint:
-  type: rdkit_desc
+  types: [ecfp4, maccs, rdkit_desc]
 
 model:
   name: linreg

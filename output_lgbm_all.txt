@@ -1,0 +1,12 @@
+15:22:38 [INFO] Loaded config: lgbm_drd2_hi | model=lgbm fp=['ecfp4', 'rdkit_desc'] task=hi dataset=drd2
+15:22:38 [INFO] 
+############################################################
+15:22:38 [INFO] EXPERIMENT: lgbm_drd2_hi_ecfp4 + ecfp4 on hi/drd2
+15:22:38 [INFO] ############################################################
+15:22:38 [INFO] Loaded hi/drd2 fold 1: train=2385, test=1190
+15:22:38 [INFO] 
+============================================================
+15:22:38 [INFO] FOLD 1 | lgbm_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+15:22:38 [INFO] ============================================================
+15:22:38 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_1.npz
+15:22:38 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_1.npz

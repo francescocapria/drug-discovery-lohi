@@ -1,0 +1,265 @@
+15:19:49 [INFO] Loaded config: svr_poly_kcnh2_lo | model=svm fp=['ecfp4', 'maccs', 'rdkit_desc'] task=lo dataset=kcnh2
+15:19:49 [INFO] 
+############################################################
+15:19:49 [INFO] EXPERIMENT: svr_poly_kcnh2_lo_ecfp4 + ecfp4 on lo/kcnh2
+15:19:49 [INFO] ############################################################
+15:19:49 [INFO] Loaded lo/kcnh2 fold 1: train=3313, test=406
+15:19:49 [INFO] 
+============================================================
+15:19:49 [INFO] FOLD 1 | svr_poly_kcnh2_lo_ecfp4 + ecfp4 | lo/kcnh2
+15:19:49 [INFO] ============================================================
+15:19:49 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/ecfp4_train_1.npz
+15:19:49 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/ecfp4_test_1.npz
+15:20:08 [INFO]   Inner CV best score: -0.3666
+15:20:08 [INFO]   Inner CV best params: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 0.5, 'model__C': 1.0}
+15:20:11 [INFO]   Train metrics: {'mean_spearman': np.float64(0.9684), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.9371), 'mean_mae': np.float64(0.1043), 'n_clusters': 1}
+15:20:11 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.451), 'std_spearman': np.float64(0.328), 'mean_r2': np.float64(-0.626), 'mean_mae': np.float64(0.8768), 'n_clusters': 34}
+15:20:11 [INFO]   Time: 22.0s
+15:20:11 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/train_1.csv
+15:20:11 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/test_1.csv
+15:20:11 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/params_fold_1.json
+15:20:11 [INFO] Loaded lo/kcnh2 fold 2: train=3313, test=406
+15:20:11 [INFO] 
+============================================================
+15:20:11 [INFO] FOLD 2 | svr_poly_kcnh2_lo_ecfp4 + ecfp4 | lo/kcnh2
+15:20:11 [INFO] ============================================================
+15:20:11 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/ecfp4_train_2.npz
+15:20:11 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/ecfp4_test_2.npz
+15:20:29 [INFO]   Inner CV best score: -0.3656
+15:20:29 [INFO]   Inner CV best params: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:20:33 [INFO]   Train metrics: {'mean_spearman': np.float64(0.9101), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.7278), 'mean_mae': np.float64(0.1796), 'n_clusters': 1}
+15:20:33 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.4105), 'std_spearman': np.float64(0.3019), 'mean_r2': np.float64(-1.0576), 'mean_mae': np.float64(0.968), 'n_clusters': 34}
+15:20:33 [INFO]   Time: 21.2s
+15:20:33 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/train_2.csv
+15:20:33 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/test_2.csv
+15:20:33 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/params_fold_2.json
+15:20:33 [INFO] Loaded lo/kcnh2 fold 3: train=3313, test=406
+15:20:33 [INFO] 
+============================================================
+15:20:33 [INFO] FOLD 3 | svr_poly_kcnh2_lo_ecfp4 + ecfp4 | lo/kcnh2
+15:20:33 [INFO] ============================================================
+15:20:33 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/ecfp4_train_3.npz
+15:20:33 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/ecfp4_test_3.npz
+15:20:50 [INFO]   Inner CV best score: -0.3654
+15:20:50 [INFO]   Inner CV best params: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 0.5, 'model__C': 1.0}
+15:20:53 [INFO]   Train metrics: {'mean_spearman': np.float64(0.9683), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.9369), 'mean_mae': np.float64(0.1045), 'n_clusters': 1}
+15:20:53 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.4662), 'std_spearman': np.float64(0.3204), 'mean_r2': np.float64(-0.7424), 'mean_mae': np.float64(0.8904), 'n_clusters': 34}
+15:20:53 [INFO]   Time: 20.3s
+15:20:53 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/train_3.csv
+15:20:53 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/test_3.csv
+15:20:53 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_ecfp4/params_fold_3.json
+15:20:53 [INFO] 
+============================================================
+15:20:53 [INFO] AGGREGATED TEST METRICS:
+15:20:53 [INFO]   mean_spearman_mean: 0.4426
+15:20:53 [INFO]   mean_spearman_std: 0.0235
+15:20:53 [INFO]   std_spearman_mean: 0.3168
+15:20:53 [INFO]   std_spearman_std: 0.011
+15:20:53 [INFO]   mean_r2_mean: -0.8087
+15:20:53 [INFO]   mean_r2_std: 0.1823
+15:20:53 [INFO]   mean_mae_mean: 0.9117
+15:20:53 [INFO]   mean_mae_std: 0.0402
+15:20:53 [INFO]   n_clusters_mean: 34.0
+15:20:53 [INFO]   n_clusters_std: 0.0
+15:20:53 [INFO] ============================================================
+15:20:53 [INFO] NOTE: Best hyperparameters differ across folds (expected in proper nested CV)
+15:20:53 [INFO]   Fold 1: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 0.5, 'model__C': 1.0}
+15:20:53 [INFO]   Fold 2: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:20:53 [INFO]   Fold 3: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 0.5, 'model__C': 1.0}
+15:20:53 [INFO] 
+############################################################
+15:20:53 [INFO] EXPERIMENT: svr_poly_kcnh2_lo_maccs + maccs on lo/kcnh2
+15:20:53 [INFO] ############################################################
+15:20:53 [INFO] Loaded lo/kcnh2 fold 1: train=3313, test=406
+15:20:53 [INFO] 
+============================================================
+15:20:53 [INFO] FOLD 1 | svr_poly_kcnh2_lo_maccs + maccs | lo/kcnh2
+15:20:53 [INFO] ============================================================
+15:20:53 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/maccs_train_1.npz
+15:20:53 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/maccs_test_1.npz
+15:20:55 [INFO]   Inner CV best score: -0.3661
+15:20:55 [INFO]   Inner CV best params: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+15:20:56 [INFO]   Train metrics: {'mean_spearman': np.float64(0.8585), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.6709), 'mean_mae': np.float64(0.1843), 'n_clusters': 1}
+15:20:56 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.0837), 'std_spearman': np.float64(0.4738), 'mean_r2': np.float64(-0.9824), 'mean_mae': np.float64(0.9686), 'n_clusters': 34}
+15:20:56 [INFO]   Time: 2.7s
+15:20:56 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/train_1.csv
+15:20:56 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/test_1.csv
+15:20:56 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/params_fold_1.json
+15:20:56 [INFO] Loaded lo/kcnh2 fold 2: train=3313, test=406
+15:20:56 [INFO] 
+============================================================
+15:20:56 [INFO] FOLD 2 | svr_poly_kcnh2_lo_maccs + maccs | lo/kcnh2
+15:20:56 [INFO] ============================================================
+15:20:56 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/maccs_train_2.npz
+15:20:56 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/maccs_test_2.npz
+15:20:59 [INFO]   Inner CV best score: -0.3663
+15:20:59 [INFO]   Inner CV best params: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+15:20:59 [INFO]   Train metrics: {'mean_spearman': np.float64(0.8584), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.6704), 'mean_mae': np.float64(0.1841), 'n_clusters': 1}
+15:20:59 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.0667), 'std_spearman': np.float64(0.5154), 'mean_r2': np.float64(-1.0097), 'mean_mae': np.float64(0.9727), 'n_clusters': 34}
+15:20:59 [INFO]   Time: 3.6s
+15:20:59 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/train_2.csv
+15:20:59 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/test_2.csv
+15:20:59 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/params_fold_2.json
+15:20:59 [INFO] Loaded lo/kcnh2 fold 3: train=3313, test=406
+15:20:59 [INFO] 
+============================================================
+15:20:59 [INFO] FOLD 3 | svr_poly_kcnh2_lo_maccs + maccs | lo/kcnh2
+15:20:59 [INFO] ============================================================
+15:20:59 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/maccs_train_3.npz
+15:20:59 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/maccs_test_3.npz
+15:21:01 [INFO]   Inner CV best score: -0.3614
+15:21:01 [INFO]   Inner CV best params: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+15:21:02 [INFO]   Train metrics: {'mean_spearman': np.float64(0.8588), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.6729), 'mean_mae': np.float64(0.184), 'n_clusters': 1}
+15:21:02 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.0887), 'std_spearman': np.float64(0.5142), 'mean_r2': np.float64(-1.0571), 'mean_mae': np.float64(0.9767), 'n_clusters': 34}
+15:21:02 [INFO]   Time: 2.6s
+15:21:02 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/train_3.csv
+15:21:02 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/test_3.csv
+15:21:02 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_maccs/params_fold_3.json
+15:21:02 [INFO] 
+============================================================
+15:21:02 [INFO] AGGREGATED TEST METRICS:
+15:21:02 [INFO]   mean_spearman_mean: 0.0797
+15:21:02 [INFO]   mean_spearman_std: 0.0094
+15:21:02 [INFO]   std_spearman_mean: 0.5011
+15:21:02 [INFO]   std_spearman_std: 0.0193
+15:21:02 [INFO]   mean_r2_mean: -1.0164
+15:21:02 [INFO]   mean_r2_std: 0.0309
+15:21:02 [INFO]   mean_mae_mean: 0.9727
+15:21:02 [INFO]   mean_mae_std: 0.0033
+15:21:02 [INFO]   n_clusters_mean: 34.0
+15:21:02 [INFO]   n_clusters_std: 0.0
+15:21:02 [INFO] ============================================================
+15:21:02 [INFO] Best hyperparameters consistent across folds: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+15:21:02 [INFO] 
+############################################################
+15:21:02 [INFO] EXPERIMENT: svr_poly_kcnh2_lo_rdkit_desc + rdkit_desc on lo/kcnh2
+15:21:02 [INFO] ############################################################
+15:21:02 [INFO] Loaded lo/kcnh2 fold 1: train=3313, test=406
+15:21:02 [INFO] 
+============================================================
+15:21:02 [INFO] FOLD 1 | svr_poly_kcnh2_lo_rdkit_desc + rdkit_desc | lo/kcnh2
+15:21:02 [INFO] ============================================================
+15:21:02 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/rdkit_desc_train_1.npz
+15:21:02 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/rdkit_desc_test_1.npz
+15:21:05 [INFO]   Inner CV best score: -0.3652
+15:21:05 [INFO]   Inner CV best params: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:21:06 [INFO]   Train metrics: {'mean_spearman': np.float64(0.7484), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.5324), 'mean_mae': np.float64(0.2544), 'n_clusters': 1}
+15:21:06 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.3742), 'std_spearman': np.float64(0.4739), 'mean_r2': np.float64(-0.9664), 'mean_mae': np.float64(0.9696), 'n_clusters': 34}
+15:21:06 [INFO]   Time: 4.3s
+15:21:06 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/train_1.csv
+15:21:06 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/test_1.csv
+15:21:06 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/params_fold_1.json
+15:21:06 [INFO] Loaded lo/kcnh2 fold 2: train=3313, test=406
+15:21:06 [INFO] 
+============================================================
+15:21:06 [INFO] FOLD 2 | svr_poly_kcnh2_lo_rdkit_desc + rdkit_desc | lo/kcnh2
+15:21:06 [INFO] ============================================================
+15:21:06 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/rdkit_desc_train_2.npz
+15:21:06 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/rdkit_desc_test_2.npz
+15:21:10 [INFO]   Inner CV best score: -0.3661
+15:21:10 [INFO]   Inner CV best params: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:21:10 [INFO]   Train metrics: {'mean_spearman': np.float64(0.7479), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.5313), 'mean_mae': np.float64(0.2545), 'n_clusters': 1}
+15:21:10 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.3474), 'std_spearman': np.float64(0.4874), 'mean_r2': np.float64(-0.9738), 'mean_mae': np.float64(0.9656), 'n_clusters': 34}
+15:21:10 [INFO]   Time: 4.1s
+15:21:10 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/train_2.csv
+15:21:10 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/test_2.csv
+15:21:10 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/params_fold_2.json
+15:21:10 [INFO] Loaded lo/kcnh2 fold 3: train=3313, test=406
+15:21:10 [INFO] 
+============================================================
+15:21:10 [INFO] FOLD 3 | svr_poly_kcnh2_lo_rdkit_desc + rdkit_desc | lo/kcnh2
+15:21:10 [INFO] ============================================================
+15:21:10 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/rdkit_desc_train_3.npz
+15:21:10 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/lo/kcnh2/rdkit_desc_test_3.npz
+15:21:14 [INFO]   Inner CV best score: -0.3733
+15:21:14 [INFO]   Inner CV best params: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:21:14 [INFO]   Train metrics: {'mean_spearman': np.float64(0.7305), 'std_spearman': np.float64(0.0), 'mean_r2': np.float64(0.5089), 'mean_mae': np.float64(0.2624), 'n_clusters': 1}
+15:21:14 [INFO]   Test metrics:  {'mean_spearman': np.float64(0.3755), 'std_spearman': np.float64(0.4771), 'mean_r2': np.float64(-0.9616), 'mean_mae': np.float64(0.9586), 'n_clusters': 34}
+15:21:14 [INFO]   Time: 4.1s
+15:21:14 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/train_3.csv
+15:21:14 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/test_3.csv
+15:21:14 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/lo/kcnh2/svr_poly_kcnh2_lo_rdkit_desc/params_fold_3.json
+15:21:14 [INFO] 
+============================================================
+15:21:14 [INFO] AGGREGATED TEST METRICS:
+15:21:14 [INFO]   mean_spearman_mean: 0.3657
+15:21:14 [INFO]   mean_spearman_std: 0.013
+15:21:14 [INFO]   std_spearman_mean: 0.4795
+15:21:14 [INFO]   std_spearman_std: 0.0058
+15:21:14 [INFO]   mean_r2_mean: -0.9673
+15:21:14 [INFO]   mean_r2_std: 0.005
+15:21:14 [INFO]   mean_mae_mean: 0.9646
+15:21:14 [INFO]   mean_mae_std: 0.0045
+15:21:14 [INFO]   n_clusters_mean: 34.0
+15:21:14 [INFO]   n_clusters_std: 0.0
+15:21:14 [INFO] ============================================================
+15:21:14 [INFO] NOTE: Best hyperparameters differ across folds (expected in proper nested CV)
+15:21:14 [INFO]   Fold 1: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:21:14 [INFO]   Fold 2: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+15:21:14 [INFO]   Fold 3: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+
+============================================================
+EXPERIMENT COMPLETE: svr_poly_kcnh2_lo_ecfp4_ecfp4_lo_kcnh2
+============================================================
+
+Aggregated test metrics:
+  mean_spearman_mean: 0.4426
+  mean_spearman_std: 0.0235
+  std_spearman_mean: 0.3168
+  std_spearman_std: 0.011
+  mean_r2_mean: -0.8087
+  mean_r2_std: 0.1823
+  mean_mae_mean: 0.9117
+  mean_mae_std: 0.0402
+  n_clusters_mean: 34.0
+  n_clusters_std: 0.0
+
+Per-fold best params:
+  Fold 1: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 0.5, 'model__C': 1.0}
+  Fold 2: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+  Fold 3: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 0.5, 'model__C': 1.0}
+
+
+============================================================
+EXPERIMENT COMPLETE: svr_poly_kcnh2_lo_maccs_maccs_lo_kcnh2
+============================================================
+
+Aggregated test metrics:
+  mean_spearman_mean: 0.0797
+  mean_spearman_std: 0.0094
+  std_spearman_mean: 0.5011
+  std_spearman_std: 0.0193
+  mean_r2_mean: -1.0164
+  mean_r2_std: 0.0309
+  mean_mae_mean: 0.9727
+  mean_mae_std: 0.0033
+  n_clusters_mean: 34.0
+  n_clusters_std: 0.0
+
+Per-fold best params:
+  Fold 1: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+  Fold 2: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+  Fold 3: {'model__gamma': 'scale', 'model__epsilon': 0.05, 'model__degree': 3, 'model__coef0': 0.0, 'model__C': 1.0}
+
+
+============================================================
+EXPERIMENT COMPLETE: svr_poly_kcnh2_lo_rdkit_desc_rdkit_desc_lo_kcnh2
+============================================================
+
+Aggregated test metrics:
+  mean_spearman_mean: 0.3657
+  mean_spearman_std: 0.013
+  std_spearman_mean: 0.4795
+  std_spearman_std: 0.0058
+  mean_r2_mean: -0.9673
+  mean_r2_std: 0.005
+  mean_mae_mean: 0.9646
+  mean_mae_std: 0.0045
+  n_clusters_mean: 34.0
+  n_clusters_std: 0.0
+
+Per-fold best params:
+  Fold 1: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+  Fold 2: {'model__gamma': 'scale', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+  Fold 3: {'model__gamma': 'auto', 'model__epsilon': 0.1, 'model__degree': 3, 'model__coef0': 1.0, 'model__C': 0.1}
+

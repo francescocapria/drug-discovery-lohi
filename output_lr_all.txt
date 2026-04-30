@@ -1,0 +1,277 @@
+16:41:13 [INFO] Loaded config: lr_maccs_drd2_hi | model=lr fp=['ecfp4', 'maccs', 'rdkit_desc'] task=hi dataset=drd2
+16:41:13 [INFO] 
+############################################################
+16:41:13 [INFO] EXPERIMENT: lr_drd2_hi_ecfp4 + ecfp4 on hi/drd2
+16:41:13 [INFO] ############################################################
+16:41:13 [INFO] Loaded hi/drd2 fold 1: train=2385, test=1190
+16:41:13 [INFO] 
+============================================================
+16:41:13 [INFO] FOLD 1 | lr_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+16:41:13 [INFO] ============================================================
+16:41:13 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_1.npz
+16:41:13 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_1.npz
+16:42:13 [INFO]   Inner CV best score: 0.9291
+16:42:13 [INFO]   Inner CV best params: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:42:13 [INFO]   Train metrics: {'pr_auc': 0.9787, 'roc_auc': 0.9519, 'bedroc': 1.0, 'f1_at_05': 0.9047, 'positive_rate': np.float64(0.7061)}
+16:42:13 [INFO]   Test metrics:  {'pr_auc': 0.6649, 'roc_auc': 0.5745, 'bedroc': 0.7652, 'f1_at_05': 0.5624, 'positive_rate': np.float64(0.6176)}
+16:42:13 [INFO]   Time: 59.9s
+16:42:13 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/train_1.csv
+16:42:13 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/test_1.csv
+16:42:13 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/params_fold_1.json
+16:42:13 [INFO] Loaded hi/drd2 fold 2: train=2381, test=1194
+16:42:13 [INFO] 
+============================================================
+16:42:13 [INFO] FOLD 2 | lr_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+16:42:13 [INFO] ============================================================
+16:42:13 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_2.npz
+16:42:13 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_2.npz
+16:44:03 [INFO]   Inner CV best score: 0.8927
+16:44:03 [INFO]   Inner CV best params: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:44:03 [INFO]   Train metrics: {'pr_auc': 0.9606, 'roc_auc': 0.9344, 'bedroc': 1.0, 'f1_at_05': 0.8771, 'positive_rate': np.float64(0.6342)}
+16:44:03 [INFO]   Test metrics:  {'pr_auc': 0.8695, 'roc_auc': 0.7027, 'bedroc': 0.9148, 'f1_at_05': 0.7206, 'positive_rate': np.float64(0.7613)}
+16:44:03 [INFO]   Time: 110.0s
+16:44:03 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/train_2.csv
+16:44:03 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/test_2.csv
+16:44:03 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/params_fold_2.json
+16:44:03 [INFO] Loaded hi/drd2 fold 3: train=2384, test=1191
+16:44:03 [INFO] 
+============================================================
+16:44:03 [INFO] FOLD 3 | lr_drd2_hi_ecfp4 + ecfp4 | hi/drd2
+16:44:03 [INFO] ============================================================
+16:44:03 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_train_3.npz
+16:44:03 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/ecfp4_test_3.npz
+16:45:04 [INFO]   Inner CV best score: 0.9170
+16:45:04 [INFO]   Inner CV best params: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:04 [INFO]   Train metrics: {'pr_auc': 0.9703, 'roc_auc': 0.94, 'bedroc': 1.0, 'f1_at_05': 0.8948, 'positive_rate': np.float64(0.6896)}
+16:45:04 [INFO]   Test metrics:  {'pr_auc': 0.7884, 'roc_auc': 0.6865, 'bedroc': 0.8571, 'f1_at_05': 0.7097, 'positive_rate': np.float64(0.6507)}
+16:45:04 [INFO]   Time: 60.7s
+16:45:04 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/train_3.csv
+16:45:04 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/test_3.csv
+16:45:04 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_ecfp4/params_fold_3.json
+16:45:04 [INFO] 
+============================================================
+16:45:04 [INFO] AGGREGATED TEST METRICS:
+16:45:04 [INFO]   pr_auc_mean: 0.7743
+16:45:04 [INFO]   pr_auc_std: 0.0841
+16:45:04 [INFO]   roc_auc_mean: 0.6546
+16:45:04 [INFO]   roc_auc_std: 0.057
+16:45:04 [INFO]   bedroc_mean: 0.8457
+16:45:04 [INFO]   bedroc_std: 0.0616
+16:45:04 [INFO]   f1_at_05_mean: 0.6642
+16:45:04 [INFO]   f1_at_05_std: 0.0721
+16:45:04 [INFO]   positive_rate_mean: 0.6765
+16:45:04 [INFO]   positive_rate_std: 0.0614
+16:45:04 [INFO] ============================================================
+16:45:04 [INFO] Best hyperparameters consistent across folds: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:04 [INFO] 
+############################################################
+16:45:04 [INFO] EXPERIMENT: lr_drd2_hi_maccs + maccs on hi/drd2
+16:45:04 [INFO] ############################################################
+16:45:04 [INFO] Loaded hi/drd2 fold 1: train=2385, test=1190
+16:45:04 [INFO] 
+============================================================
+16:45:04 [INFO] FOLD 1 | lr_drd2_hi_maccs + maccs | hi/drd2
+16:45:04 [INFO] ============================================================
+16:45:04 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_train_1.npz
+16:45:04 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_test_1.npz
+16:45:13 [INFO]   Inner CV best score: 0.8851
+16:45:13 [INFO]   Inner CV best params: {'C': 1.0, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:13 [INFO]   Train metrics: {'pr_auc': 0.9252, 'roc_auc': 0.8579, 'bedroc': 0.979, 'f1_at_05': 0.8343, 'positive_rate': np.float64(0.7061)}
+16:45:13 [INFO]   Test metrics:  {'pr_auc': 0.6427, 'roc_auc': 0.5558, 'bedroc': 0.6483, 'f1_at_05': 0.3284, 'positive_rate': np.float64(0.6176)}
+16:45:13 [INFO]   Time: 8.9s
+16:45:13 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/train_1.csv
+16:45:13 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/test_1.csv
+16:45:13 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/params_fold_1.json
+16:45:13 [INFO] Loaded hi/drd2 fold 2: train=2381, test=1194
+16:45:13 [INFO] 
+============================================================
+16:45:13 [INFO] FOLD 2 | lr_drd2_hi_maccs + maccs | hi/drd2
+16:45:13 [INFO] ============================================================
+16:45:13 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_train_2.npz
+16:45:13 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_test_2.npz
+16:45:22 [INFO]   Inner CV best score: 0.8334
+16:45:22 [INFO]   Inner CV best params: {'C': 0.5, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:22 [INFO]   Train metrics: {'pr_auc': 0.8848, 'roc_auc': 0.8229, 'bedroc': 0.9904, 'f1_at_05': 0.7921, 'positive_rate': np.float64(0.6342)}
+16:45:22 [INFO]   Test metrics:  {'pr_auc': 0.7878, 'roc_auc': 0.5609, 'bedroc': 0.7955, 'f1_at_05': 0.4834, 'positive_rate': np.float64(0.7613)}
+16:45:22 [INFO]   Time: 9.2s
+16:45:22 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/train_2.csv
+16:45:22 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/test_2.csv
+16:45:22 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/params_fold_2.json
+16:45:22 [INFO] Loaded hi/drd2 fold 3: train=2384, test=1191
+16:45:22 [INFO] 
+============================================================
+16:45:22 [INFO] FOLD 3 | lr_drd2_hi_maccs + maccs | hi/drd2
+16:45:22 [INFO] ============================================================
+16:45:22 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_train_3.npz
+16:45:22 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/maccs_test_3.npz
+16:45:35 [INFO]   Inner CV best score: 0.8572
+16:45:35 [INFO]   Inner CV best params: {'C': 0.5, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:35 [INFO]   Train metrics: {'pr_auc': 0.9029, 'roc_auc': 0.8242, 'bedroc': 0.9645, 'f1_at_05': 0.7915, 'positive_rate': np.float64(0.6896)}
+16:45:35 [INFO]   Test metrics:  {'pr_auc': 0.7696, 'roc_auc': 0.68, 'bedroc': 0.8161, 'f1_at_05': 0.713, 'positive_rate': np.float64(0.6507)}
+16:45:35 [INFO]   Time: 12.5s
+16:45:35 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/train_3.csv
+16:45:35 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/test_3.csv
+16:45:35 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_maccs/params_fold_3.json
+16:45:35 [INFO] 
+============================================================
+16:45:35 [INFO] AGGREGATED TEST METRICS:
+16:45:35 [INFO]   pr_auc_mean: 0.7334
+16:45:35 [INFO]   pr_auc_std: 0.0645
+16:45:35 [INFO]   roc_auc_mean: 0.5989
+16:45:35 [INFO]   roc_auc_std: 0.0574
+16:45:35 [INFO]   bedroc_mean: 0.7533
+16:45:35 [INFO]   bedroc_std: 0.0747
+16:45:35 [INFO]   f1_at_05_mean: 0.5083
+16:45:35 [INFO]   f1_at_05_std: 0.158
+16:45:35 [INFO]   positive_rate_mean: 0.6765
+16:45:35 [INFO]   positive_rate_std: 0.0614
+16:45:35 [INFO] ============================================================
+16:45:35 [INFO] NOTE: Best hyperparameters differ across folds (expected in proper nested CV)
+16:45:35 [INFO]   Fold 1: {'C': 1.0, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:35 [INFO]   Fold 2: {'C': 0.5, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:35 [INFO]   Fold 3: {'C': 0.5, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+16:45:35 [INFO] 
+############################################################
+16:45:35 [INFO] EXPERIMENT: lr_drd2_hi_rdkit_desc + rdkit_desc on hi/drd2
+16:45:35 [INFO] ############################################################
+16:45:35 [INFO] Loaded hi/drd2 fold 1: train=2385, test=1190
+16:45:35 [INFO] 
+============================================================
+16:45:35 [INFO] FOLD 1 | lr_drd2_hi_rdkit_desc + rdkit_desc | hi/drd2
+16:45:35 [INFO] ============================================================
+16:45:35 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/rdkit_desc_train_1.npz
+16:45:35 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/rdkit_desc_test_1.npz
+16:46:18 [INFO]   Inner CV best score: 0.8840
+16:46:18 [INFO]   Inner CV best params: {'model__C': 1.0, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+16:46:18 [INFO]   Train metrics: {'pr_auc': 0.9423, 'roc_auc': 0.8699, 'bedroc': 1.0, 'f1_at_05': 0.8365, 'positive_rate': np.float64(0.7061)}
+16:46:18 [INFO]   Test metrics:  {'pr_auc': 0.733, 'roc_auc': 0.6577, 'bedroc': 0.8489, 'f1_at_05': 0.671, 'positive_rate': np.float64(0.6176)}
+16:46:18 [INFO]   Time: 43.8s
+16:46:18 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/train_1.csv
+16:46:18 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/test_1.csv
+16:46:18 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/params_fold_1.json
+16:46:18 [INFO] Loaded hi/drd2 fold 2: train=2381, test=1194
+16:46:18 [INFO] 
+============================================================
+16:46:18 [INFO] FOLD 2 | lr_drd2_hi_rdkit_desc + rdkit_desc | hi/drd2
+16:46:18 [INFO] ============================================================
+16:46:18 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/rdkit_desc_train_2.npz
+16:46:18 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/rdkit_desc_test_2.npz
+16:47:03 [INFO]   Inner CV best score: 0.8519
+16:47:03 [INFO]   Inner CV best params: {'model__C': 10.0, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+16:47:03 [INFO]   Train metrics: {'pr_auc': 0.9086, 'roc_auc': 0.8556, 'bedroc': 0.9979, 'f1_at_05': 0.808, 'positive_rate': np.float64(0.6342)}
+16:47:03 [INFO]   Test metrics:  {'pr_auc': 0.875, 'roc_auc': 0.6968, 'bedroc': 0.9272, 'f1_at_05': 0.7384, 'positive_rate': np.float64(0.7613)}
+16:47:03 [INFO]   Time: 44.4s
+16:47:03 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/train_2.csv
+16:47:03 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/test_2.csv
+16:47:03 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/params_fold_2.json
+16:47:03 [INFO] Loaded hi/drd2 fold 3: train=2384, test=1191
+16:47:03 [INFO] 
+============================================================
+16:47:03 [INFO] FOLD 3 | lr_drd2_hi_rdkit_desc + rdkit_desc | hi/drd2
+16:47:03 [INFO] ============================================================
+16:47:03 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/rdkit_desc_train_3.npz
+16:47:03 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/drd2/rdkit_desc_test_3.npz
+16:47:29 [INFO]   Inner CV best score: 0.8804
+16:47:29 [INFO]   Inner CV best params: {'model__C': 0.5, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+16:47:29 [INFO]   Train metrics: {'pr_auc': 0.929, 'roc_auc': 0.855, 'bedroc': 0.9995, 'f1_at_05': 0.8204, 'positive_rate': np.float64(0.6896)}
+16:47:29 [INFO]   Test metrics:  {'pr_auc': 0.7685, 'roc_auc': 0.6348, 'bedroc': 0.9438, 'f1_at_05': 0.6595, 'positive_rate': np.float64(0.6507)}
+16:47:29 [INFO]   Time: 26.4s
+16:47:29 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/train_3.csv
+16:47:29 [INFO] Saved predictions to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/test_3.csv
+16:47:29 [INFO] Saved params to /home/f.capria/drug-discovery-lohi/results/hi/drd2/lr_drd2_hi_rdkit_desc/params_fold_3.json
+16:47:29 [INFO] 
+============================================================
+16:47:29 [INFO] AGGREGATED TEST METRICS:
+16:47:29 [INFO]   pr_auc_mean: 0.7922
+16:47:29 [INFO]   pr_auc_std: 0.0603
+16:47:29 [INFO]   roc_auc_mean: 0.6631
+16:47:29 [INFO]   roc_auc_std: 0.0256
+16:47:29 [INFO]   bedroc_mean: 0.9066
+16:47:29 [INFO]   bedroc_std: 0.0414
+16:47:29 [INFO]   f1_at_05_mean: 0.6896
+16:47:29 [INFO]   f1_at_05_std: 0.0348
+16:47:29 [INFO]   positive_rate_mean: 0.6765
+16:47:29 [INFO]   positive_rate_std: 0.0614
+16:47:29 [INFO] ============================================================
+16:47:29 [INFO] NOTE: Best hyperparameters differ across folds (expected in proper nested CV)
+16:47:29 [INFO]   Fold 1: {'model__C': 1.0, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+16:47:29 [INFO]   Fold 2: {'model__C': 10.0, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+16:47:29 [INFO]   Fold 3: {'model__C': 0.5, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+
+============================================================
+EXPERIMENT COMPLETE: lr_drd2_hi_ecfp4_ecfp4_hi_drd2
+============================================================
+
+Aggregated test metrics:
+  pr_auc_mean: 0.7743
+  pr_auc_std: 0.0841
+  roc_auc_mean: 0.6546
+  roc_auc_std: 0.057
+  bedroc_mean: 0.8457
+  bedroc_std: 0.0616
+  f1_at_05_mean: 0.6642
+  f1_at_05_std: 0.0721
+  positive_rate_mean: 0.6765
+  positive_rate_std: 0.0614
+
+Per-fold best params:
+  Fold 1: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+  Fold 2: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+  Fold 3: {'C': 0.1, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+
+
+============================================================
+EXPERIMENT COMPLETE: lr_drd2_hi_maccs_maccs_hi_drd2
+============================================================
+
+Aggregated test metrics:
+  pr_auc_mean: 0.7334
+  pr_auc_std: 0.0645
+  roc_auc_mean: 0.5989
+  roc_auc_std: 0.0574
+  bedroc_mean: 0.7533
+  bedroc_std: 0.0747
+  f1_at_05_mean: 0.5083
+  f1_at_05_std: 0.158
+  positive_rate_mean: 0.6765
+  positive_rate_std: 0.0614
+
+Per-fold best params:
+  Fold 1: {'C': 1.0, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+  Fold 2: {'C': 0.5, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+  Fold 3: {'C': 0.5, 'class_weight': 'balanced', 'l1_ratio': 0.0}
+
+
+============================================================
+EXPERIMENT COMPLETE: lr_drd2_hi_rdkit_desc_rdkit_desc_hi_drd2
+============================================================
+
+Aggregated test metrics:
+  pr_auc_mean: 0.7922
+  pr_auc_std: 0.0603
+  roc_auc_mean: 0.6631
+  roc_auc_std: 0.0256
+  bedroc_mean: 0.9066
+  bedroc_std: 0.0414
+  f1_at_05_mean: 0.6896
+  f1_at_05_std: 0.0348
+  positive_rate_mean: 0.6765
+  positive_rate_std: 0.0614
+
+Per-fold best params:
+  Fold 1: {'model__C': 1.0, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+  Fold 2: {'model__C': 10.0, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+  Fold 3: {'model__C': 0.5, 'model__class_weight': 'balanced', 'model__l1_ratio': 1.0}
+
+16:47:32 [INFO] Loaded config: lr_maccs_hiv_hi | model=lr fp=['ecfp4', 'maccs', 'rdkit_desc'] task=hi dataset=hiv
+16:47:32 [INFO] 
+############################################################
+16:47:32 [INFO] EXPERIMENT: lr_hiv_hi_ecfp4 + ecfp4 on hi/hiv
+16:47:32 [INFO] ############################################################
+16:47:32 [INFO] Loaded hi/hiv fold 1: train=15696, test=7847
+16:47:32 [INFO] 
+============================================================
+16:47:32 [INFO] FOLD 1 | lr_hiv_hi_ecfp4 + ecfp4 | hi/hiv
+16:47:32 [INFO] ============================================================
+16:47:32 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/hiv/ecfp4_train_1.npz
+16:47:32 [INFO] Loading fingerprints from cache: /home/f.capria/drug-discovery-lohi/features/hi/hiv/ecfp4_test_1.npz
