@@ -1,0 +1,27 @@
+experiment:
+  name: gb_rdkit_desc_drd2_hi_ft
+  task: hi
+  dataset: drd2
+ 
+fingerprint:
+  types: [rdkit_desc]
+ 
+model:
+  name: gb
+  fixed:
+    random_state: 42
+  search:
+    n_estimators: [200, 300, 500, 800]
+    learning_rate: [0.005, 0.01, 0.025, 0.05]
+    max_depth: [3, 4, 5, 6]
+    min_samples_split: [2, 5, 10]
+    min_samples_leaf: [1, 2, 4]
+    subsample: [0.6, 0.7, 0.8, 0.9]
+    max_features: [sqrt, log2, 0.3, 0.5]
+ 
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: random
+  n_iter: 200
+  random_state: 42

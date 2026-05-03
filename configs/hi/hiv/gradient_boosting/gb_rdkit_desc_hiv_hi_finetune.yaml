@@ -1,0 +1,27 @@
+experiment:
+  name: gb_rdkit_desc_hiv_hi_ft
+  task: hi
+  dataset: hiv
+ 
+fingerprint:
+  types: [rdkit_desc]
+ 
+model:
+  name: gb
+  fixed:
+    random_state: 42
+    subsample: 0.6
+  search:
+    n_estimators: [200, 300, 500, 800]
+    learning_rate: [0.005, 0.01, 0.025, 0.05]
+    max_depth: [2, 3, 4]
+    min_samples_split: [10, 20, 50]
+    min_samples_leaf: [8, 16, 32, 64]
+    max_features: [0.1, 0.2, sqrt]
+ 
+cv:
+  inner_k: 3
+  scoring: average_precision
+  search_strategy: random
+  n_iter: 50
+  random_state: 42

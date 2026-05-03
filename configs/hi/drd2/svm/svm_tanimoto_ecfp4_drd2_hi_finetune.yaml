@@ -1,0 +1,22 @@
+experiment:
+  name: svm_tanimoto_ecfp4_drd2_hi_ft
+  task: hi
+  dataset: drd2
+ 
+fingerprint:
+  types: [ecfp4]
+ 
+model:
+  name: svm
+  fixed:
+    kernel: tanimoto
+    probability: true
+  search:
+    C: [0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0, 20.0]
+    class_weight: [null, balanced]
+ 
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42
