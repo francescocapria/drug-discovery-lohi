@@ -1,5 +1,3 @@
-# utils/mlp_utils.py
-
 import copy
 import time
 import random
@@ -11,6 +9,7 @@ import torch.nn as nn
 
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
+from sklearn.preprocessing import StandardScaler
 
 from utils.io_utils import get_feature_cache_path
 from utils.fingerprints import compute_fingerprints
@@ -23,13 +22,14 @@ from utils.metrics import get_hi_metrics, aggregate_fold_metrics
 
 def set_seed(seed: int):
     """
-    Set random seeds for Python, NumPy, and PyTorch.
+    Set random seeds for Python, NumPy and PyTorch.
     """
 
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    # cuda casuality if available
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
@@ -41,11 +41,18 @@ def set_seed(seed: int):
 def featurize_fold(fold_idx, cfg, folds_data):
     """
     Convert one fold from SMILES/dataframes to PyTorch tensors.
+
+    Important:
+    - For ECFP4/MACCS, the features are already binary fingerprints.
+    - For RDKit descriptors, we still keep the raw descriptors here.
+      Scaling is done later inside each inner split and final retraining
+      step, to avoid leakage.
     """
 
     train_df = folds_data[fold_idx]["train"]
-    test_df = folds_data[fold_idx]["test"]
+    test_df  = folds_data[fold_idx]["test"]
 
+    # cache paths
     train_cache = get_feature_cache_path(
         cfg["task"],
         cfg["dataset"],
@@ -74,21 +81,33 @@ def featurize_fold(fold_idx, cfg, folds_data):
         test_cache,
     )
 
+    # numpy array --> pytorch tensors
     X_train = torch.from_numpy(X_train_np).float()
-    X_test = torch.from_numpy(X_test_np).float()
+    X_test  = torch.from_numpy(X_test_np).float()
 
-    y_train = torch.from_numpy(train_df["value"].values).float()
-    y_test = torch.from_numpy(test_df["value"].values).float()
+    # float for BCEWithLogitsLoss --> 0.0 or 1.0
+    y_train = torch.from_numpy(
+        train_df["value"].values.astype(np.float32)
+    ).float()
+
+    y_test = torch.from_numpy(
+        test_df["value"].values.astype(np.float32)
+    ).float()
 
     return X_train, y_train, X_test, y_test
 
 
 def prepare_all_fold_tensors(cfg, folds_data, logger=None):
     """
-    Precompute fingerprints and tensors for all outer folds.
+    Precompute fingerprints/descriptors and tensors for all outer folds.
+
+    No feature scaling is applied here. This is intentional: continuous descriptors, 
+    such as rdkit_desc, must be scaled later inside the correct train/validation split to avoid leakage.
     """
 
     folds_tensors = {}
+
+    scale_features = cfg.get("fp_type") == "rdkit_desc"
 
     for fold_idx in cfg["outer_folds"]:
         X_train, y_train, X_test, y_test = featurize_fold(
@@ -100,10 +119,12 @@ def prepare_all_fold_tensors(cfg, folds_data, logger=None):
         folds_tensors[fold_idx] = {
             "X_train": X_train,
             "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
+            "X_test":  X_test,
+            "y_test":  y_test,
+            "scale_features": scale_features,
         }
 
+        # measuring positive-negative imbalance
         pos_weight = compute_pos_weight(y_train)
 
         if logger is not None:
@@ -111,15 +132,42 @@ def prepare_all_fold_tensors(cfg, folds_data, logger=None):
                 f"Fold {fold_idx} | "
                 f"X_train: {tuple(X_train.shape)}, "
                 f"X_test: {tuple(X_test.shape)} | "
-                f"pos_weight: {pos_weight.item():.3f}"
+                f"scale_features={scale_features} | "
+                f"pos_weight={pos_weight.item():.3f}"
             )
 
     return folds_tensors
 
 
+def scale_features_from_train(X_train, X_other):
+    """
+    Fit StandardScaler on X_train only and transform X_train and X_other.
+
+    Used only for continuous descriptors such as rdkit_desc.
+    """
+
+    scaler = StandardScaler()
+
+    X_train_np = X_train.numpy()
+    X_other_np = X_other.numpy()
+
+    X_train_scaled = scaler.fit_transform(X_train_np)
+    X_other_scaled = scaler.transform(X_other_np)
+
+    X_train_t = torch.from_numpy(X_train_scaled).float()
+    X_other_t = torch.from_numpy(X_other_scaled).float()
+
+    return X_train_t, X_other_t, scaler
+
+
 def compute_pos_weight(y):
     """
     Compute positive-class weight for BCEWithLogitsLoss.
+
+    pos_weight = n_negative / n_positive
+
+    This increases the contribution of positive examples when the dataset is
+    imbalanced.
     """
 
     n_pos = y.sum().item()
@@ -132,7 +180,7 @@ def compute_pos_weight(y):
     return torch.tensor(n_neg / n_pos, dtype=torch.float32)
 
 
-def make_loader(X, y, batch_size, shuffle=True, seed=42):
+def make_loader(X, y, batch_size, shuffle=True, seed=42, drop_last=False):
     """
     Build a reproducible PyTorch DataLoader from tensors.
     """
@@ -147,10 +195,28 @@ def make_loader(X, y, batch_size, shuffle=True, seed=42):
         batch_size=batch_size,
         shuffle=shuffle,
         generator=generator,
-        drop_last=False,
+        drop_last=drop_last,
     )
 
     return loader
+
+
+def should_drop_last_for_batchnorm(X, batch_size, batchnorm):
+    """
+    Decide whether to drop the final batch.
+    """
+
+    if not batchnorm:
+        return False
+
+    n = len(X)
+
+    if n <= batch_size:
+        return False
+
+    last_batch_size = n % batch_size
+
+    return last_batch_size == 1
 
 
 # -------------------------------------------------------------------------
@@ -160,16 +226,27 @@ def make_loader(X, y, batch_size, shuffle=True, seed=42):
 def build_hidden_layers(n_layers, n_nodes, r):
     """
     Build hidden-layer widths using a flat or pyramidal shape.
+
+    If r = 1, all layers have the same width.
+    If r < 1, the architecture is pyramidal.
     """
 
+    if n_layers < 1:
+        raise ValueError("n_layers must be >= 1")
+
+    # flat network
     if r == 1.0:
         width = n_nodes // n_layers
-        return [max(1, width)] * n_layers
+        return [max(1, width)] * n_layers # to avoid layers with 0 neurons
 
+    # pyramidal network formula
+    # e.g. n_layers=3 , n_nodes=896 , r=0.5 --> first_width=512
     first_width = n_nodes * (1 - r) / (1 - r ** n_layers)
 
     widths = []
 
+    # construct every width
+    # e.g n_layers = 3, first_width = 512, r = 0.5 --> [512, 256, 128]
     for layer_idx in range(n_layers):
         width = round(first_width * (r ** layer_idx))
         width = max(1, int(width))
@@ -192,24 +269,31 @@ def get_activation(name):
     if name == "elu":
         return nn.ELU()
 
+    if name == "gelu":
+        return nn.GELU()
+
+    # SiLU(x) = x * sigmoid(x)
+    if name == "silu":
+        return nn.SiLU()
+
     raise ValueError(f"Unknown activation: {name}")
 
 
 def initialize_linear_layer(layer, init_name, activation_name):
     """
     Initialize one linear layer.
+
+    Relu and leaky_relu --> kaiming initialization
+    Gelu, silu and elu --> zavier inizialization
     """
 
     if init_name == "kaiming":
-        nonlinearity = "relu"
-
         if activation_name == "leaky_relu":
-            nonlinearity = "leaky_relu"
-
-        nn.init.kaiming_normal_(
-            layer.weight,
-            nonlinearity=nonlinearity,
-        )
+            nn.init.kaiming_normal_(layer.weight, nonlinearity="leaky_relu")
+        elif activation_name in ("gelu", "silu", "elu"):
+            nn.init.xavier_uniform_(layer.weight)
+        else:
+            nn.init.kaiming_normal_(layer.weight, nonlinearity="relu")
 
     elif init_name == "xavier":
         nn.init.xavier_uniform_(layer.weight)
@@ -222,7 +306,11 @@ def initialize_linear_layer(layer, init_name, activation_name):
 
 class SimpleMLP(nn.Module):
     """
-    Simple MLP for binary classification with one output logit.
+    Simple MLP for binary classification.
+
+    Output:
+    - one scalar logit per molecule;
+    - sigmoid is not applied here, because BCEWithLogitsLoss expects logits.
     """
 
     def __init__(
@@ -239,6 +327,7 @@ class SimpleMLP(nn.Module):
         layers = []
         current_dim = input_dim
 
+        # Linear → BatchNorm → Activation → Dropout
         for hidden_dim in hidden_layers:
             linear = nn.Linear(current_dim, hidden_dim)
             initialize_linear_layer(linear, init, activation)
@@ -253,7 +342,7 @@ class SimpleMLP(nn.Module):
             if dropout > 0:
                 layers.append(nn.Dropout(dropout))
 
-            current_dim = hidden_dim
+            current_dim = hidden_dim # e.g. 2048 → 512
 
         output_layer = nn.Linear(current_dim, 1)
         nn.init.xavier_uniform_(output_layer.weight)
@@ -301,7 +390,7 @@ def train_one_epoch(model, loader, criterion, optimizer, grad_clip, device):
     Train the model for one epoch and return average training loss.
     """
 
-    model.train()
+    model.train() 
 
     total_loss = 0.0
     n_examples = 0
@@ -312,7 +401,7 @@ def train_one_epoch(model, loader, criterion, optimizer, grad_clip, device):
 
         optimizer.zero_grad()
 
-        logits = model(X_batch)
+        logits = model(X_batch) # forward pass
         loss = criterion(logits, y_batch)
 
         loss.backward()
@@ -326,10 +415,10 @@ def train_one_epoch(model, loader, criterion, optimizer, grad_clip, device):
         optimizer.step()
 
         batch_size = len(y_batch)
-        total_loss += loss.item() * batch_size
+        total_loss += loss.item() * batch_size # weighted mean on the epoch
         n_examples += batch_size
 
-    average_loss = total_loss / n_examples
+    average_loss = total_loss / max(1, n_examples)
 
     return average_loss
 
@@ -339,7 +428,7 @@ def predict_probabilities(model, X, device):
     Predict positive-class probabilities from logits.
     """
 
-    model.eval()
+    model.eval() # always before making predictions
 
     with torch.no_grad():
         logits = model(X.to(device))
@@ -367,15 +456,19 @@ def evaluate_model(model, X_val, y_val, device):
     return metrics
 
 
-def train_and_evaluate(X_train, y_train, X_val, y_val, hp, device, seed=42):
+def train_and_evaluate( X_train, y_train, X_val, y_val, hp, device,
+    seed=42,
+):
     """
     Train one MLP with early stopping on validation PR-AUC.
+
+    This is used during inner CV and final retraining.
     """
 
     set_seed(seed)
 
     model, hidden_layers = create_model(
-        input_dim=X_train.shape[1],
+        input_dim=X_train.shape[1], # e.g. ecfp4 --> 2048
         hp=hp,
     )
 
@@ -395,9 +488,15 @@ def train_and_evaluate(X_train, y_train, X_val, y_val, hp, device, seed=42):
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode="max",
+        mode="max", # max beacuse pr-auc must increment
         factor=0.5,
-        patience=5,
+        patience=5, # reduce learning rate if PR-AUC plateaus for 5 epochs (not early stopping). 
+    )
+
+    drop_last = should_drop_last_for_batchnorm(
+        X=X_train,
+        batch_size=hp["batch_size"],
+        batchnorm=hp["batchnorm"],
     )
 
     train_loader = make_loader(
@@ -406,11 +505,14 @@ def train_and_evaluate(X_train, y_train, X_val, y_val, hp, device, seed=42):
         batch_size=hp["batch_size"],
         shuffle=True,
         seed=seed,
+        drop_last=drop_last,
     )
 
+    # early stopping variables
     best_score = -1.0
     best_state = None
     best_epoch = -1
+    best_train_loss = None
     epochs_without_improvement = 0
 
     history = {
@@ -446,6 +548,7 @@ def train_and_evaluate(X_train, y_train, X_val, y_val, hp, device, seed=42):
             best_score = val_pr_auc
             best_state = copy.deepcopy(model.state_dict())
             best_epoch = epoch
+            best_train_loss = train_loss
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
@@ -457,6 +560,7 @@ def train_and_evaluate(X_train, y_train, X_val, y_val, hp, device, seed=42):
         "best_score": best_score,
         "best_state": best_state,
         "best_epoch": best_epoch,
+        "best_train_loss": best_train_loss,
         "hidden_layers": hidden_layers,
         "history": history,
     }
@@ -471,6 +575,9 @@ def train_and_evaluate(X_train, y_train, X_val, y_val, hp, device, seed=42):
 def sample_hyperparameters(search_space, rng):
     """
     Sample one random hyperparameter configuration.
+
+    search_space must contain discrete lists/arrays of values.
+
     """
 
     hp = {}
@@ -486,18 +593,58 @@ def sample_hyperparameters(search_space, rng):
     return hp
 
 
-def evaluate_hyperparameters_inner_cv(
-    X_train,
-    y_train,
-    hp,
-    fixed_hp,
-    inner_k,
-    device,
-    seed,
+def check_stratified_cv_is_possible(y_train, inner_k):
+    """
+    Each class must have at least inner_k examples.
+    """
+
+    y_np = y_train.numpy().astype(int)
+
+    n_pos = int(y_np.sum())
+    n_neg = int(len(y_np) - n_pos)
+
+    # e.g. not valid --> n_pos = 1, n_neg = 50, inner_k = 2
+    if n_pos < inner_k or n_neg < inner_k:
+        raise ValueError(
+            f"StratifiedKFold with inner_k={inner_k} is not possible: "
+            f"n_pos={n_pos}, n_neg={n_neg}."
+        )
+
+
+def maybe_scale_inner_features(X_inner_train, X_inner_val, scale_features,
+):
+    """
+    Scale features inside one inner-CV split if needed.
+
+    For ECFP4/MACCS:
+    - scale_features=False, tensors are returned unchanged.
+
+    For rdkit_desc:
+    - scale_features=True, scaler is fit on inner train only.
+    """
+
+    if not scale_features:
+        return X_inner_train, X_inner_val, None
+
+    return scale_features_from_train(
+        X_inner_train,
+        X_inner_val,
+    )
+
+
+def evaluate_hyperparameters_inner_cv( X_train, y_train, hp, fixed_hp, inner_k, device, seed, scale_features=False,
 ):
     """
     Evaluate one hyperparameter configuration with inner stratified CV.
+
+    Returns:
+    - mean validation PR-AUC;
+    - mean train loss at the best validation epoch, kept only as diagnostic.
+
+    Feature scaling is done inside each inner fold when scale_features=True.
     """
+
+    check_stratified_cv_is_possible(y_train, inner_k)
 
     splitter = StratifiedKFold(
         n_splits=inner_k,
@@ -508,6 +655,7 @@ def evaluate_hyperparameters_inner_cv(
     y_numpy = y_train.numpy().astype(int)
 
     scores = []
+    train_losses_at_best = []
 
     for inner_train_idx, inner_val_idx in splitter.split(X_train, y_numpy):
         X_inner_train = X_train[inner_train_idx]
@@ -515,6 +663,12 @@ def evaluate_hyperparameters_inner_cv(
 
         X_inner_val = X_train[inner_val_idx]
         y_inner_val = y_train[inner_val_idx]
+
+        X_inner_train, X_inner_val, _ = maybe_scale_inner_features(
+            X_inner_train=X_inner_train,
+            X_inner_val=X_inner_val,
+            scale_features=scale_features,
+        )
 
         full_hp = {
             **hp,
@@ -532,23 +686,15 @@ def evaluate_hyperparameters_inner_cv(
         )
 
         scores.append(training_result["best_score"])
+        train_losses_at_best.append(training_result["best_train_loss"])
 
     mean_score = float(np.mean(scores))
+    mean_train_loss_at_best = float(np.mean(train_losses_at_best))
 
-    return mean_score
+    return mean_score, mean_train_loss_at_best
 
 
-def run_random_search_for_fold(
-    X_train,
-    y_train,
-    fold_idx,
-    cfg,
-    search_space,
-    fixed_hp,
-    n_iter,
-    device,
-    seed,
-    logger=None,
+def run_random_search_for_fold( X_train, y_train, fold_idx, cfg, search_space, fixed_hp, n_iter, device, seed, logger=None, scale_features=False,
 ):
     """
     Run random search inside one outer fold.
@@ -566,7 +712,7 @@ def run_random_search_for_fold(
 
         start_time = time.time()
 
-        mean_inner_score = evaluate_hyperparameters_inner_cv(
+        mean_inner_score, mean_train_loss_at_best = evaluate_hyperparameters_inner_cv(
             X_train=X_train,
             y_train=y_train,
             hp=hp,
@@ -574,6 +720,7 @@ def run_random_search_for_fold(
             inner_k=cfg["inner_k"],
             device=device,
             seed=seed + fold_idx,
+            scale_features=scale_features,
         )
 
         elapsed_time = time.time() - start_time
@@ -581,6 +728,7 @@ def run_random_search_for_fold(
         result = {
             "hp": hp,
             "score": mean_inner_score,
+            "mean_train_loss_at_best": mean_train_loss_at_best,
         }
 
         search_results.append(result)
@@ -611,42 +759,23 @@ def run_random_search_for_fold(
 
     best_score = best_result["score"]
 
-    return best_hp, best_score, search_results
+    # Diagnostic only. Final retraining now uses an internal stratified
+    # early-stopping split instead of this threshold.
+    best_train_loss_diagnostic = best_result["mean_train_loss_at_best"]
+
+    return best_hp, best_score, best_train_loss_diagnostic, search_results
 
 
 # -------------------------------------------------------------------------
 # Final retraining and test evaluation
 # -------------------------------------------------------------------------
 
-def make_retraining_split(y_train, fold_idx, seed, test_size=0.15):
-    """
-    Split outer training data into retraining and early-stopping validation.
-    """
-
-    splitter = StratifiedShuffleSplit(
-        n_splits=1,
-        test_size=test_size,
-        random_state=seed + fold_idx,
-    )
-
-    y_numpy = y_train.numpy().astype(int)
-
-    retrain_idx, early_stop_idx = next(
-        splitter.split(
-            np.zeros(len(y_train)),
-            y_numpy,
-        )
-    )
-
-    return retrain_idx, early_stop_idx
-
-
 def predict_with_trained_state(X_test, input_dim, hp, state_dict, device):
     """
     Rebuild the model, load saved weights, and predict test probabilities.
     """
 
-    model, hidden_layers = create_model(
+    model, _ = create_model(
         input_dim=input_dim,
         hp=hp,
     )
@@ -663,34 +792,34 @@ def predict_with_trained_state(X_test, input_dim, hp, state_dict, device):
     return probabilities
 
 
-def retrain_ensemble_and_evaluate_test(
-    X_train,
-    y_train,
-    X_test,
-    y_test,
-    best_hp,
-    fold_idx,
-    n_seeds,
-    device,
-    seed,
-    logger=None,
-):
+def make_stratified_holdout_split(y, val_fraction=0.15, seed=42):
     """
-    Retrain the best configuration with multiple seeds and evaluate the ensemble.
+    Create a stratified train/validation split for final early stopping.
     """
 
-    retrain_idx, early_stop_idx = make_retraining_split(
-        y_train=y_train,
-        fold_idx=fold_idx,
-        seed=seed,
-        test_size=0.15,
+    y_np = y.numpy().astype(int)
+
+    splitter = StratifiedShuffleSplit(
+        n_splits=1,
+        test_size=val_fraction,
+        random_state=seed,
     )
 
-    X_retrain = X_train[retrain_idx]
-    y_retrain = y_train[retrain_idx]
+    train_idx, val_idx = next(splitter.split(np.zeros(len(y_np)), y_np))
 
-    X_early_stop = X_train[early_stop_idx]
-    y_early_stop = y_train[early_stop_idx]
+    return train_idx, val_idx
+
+
+def retrain_ensemble_and_evaluate_test( X_train, y_train, X_test, y_test, best_hp, best_train_loss_diagnostic, fold_idx, n_seeds, device, seed, logger=None, scale_features=False,
+):
+    """
+    Retrain the best configuration with multiple seeds and evaluate the
+    ensemble on the outer test fold.
+
+    We use an internal stratified 85/15 split for early stopping on PR-AUC.
+    This is more robust than stopping on a train-loss threshold, especially
+    when BCEWithLogitsLoss uses pos_weight.
+    """
 
     all_test_probabilities = []
     seed_results = []
@@ -698,19 +827,51 @@ def retrain_ensemble_and_evaluate_test(
     for seed_id in range(n_seeds):
         current_seed = seed + fold_idx * 100 + seed_id
 
+        train_idx, val_idx = make_stratified_holdout_split(
+            y=y_train,
+            val_fraction=0.15,
+            seed=current_seed,
+        )
+
+        X_retrain = X_train[train_idx]
+        y_retrain = y_train[train_idx]
+
+        # data for early stopping
+        X_es = X_train[val_idx]
+        y_es = y_train[val_idx]
+
+        if scale_features:
+            X_retrain, X_es, scaler = scale_features_from_train(
+                X_retrain,
+                X_es,
+            )
+
+            X_test_scaled_np = scaler.transform(X_test.numpy())
+            X_test_final = torch.from_numpy(X_test_scaled_np).float()
+
+        else:
+            X_test_final = X_test
+
         training_result = train_and_evaluate(
             X_train=X_retrain,
             y_train=y_retrain,
-            X_val=X_early_stop,
-            y_val=y_early_stop,
+            X_val=X_es,
+            y_val=y_es,
             hp=best_hp,
             device=device,
             seed=current_seed,
         )
 
+        if logger is not None:
+            logger.info(
+                f"  Seed {seed_id + 1}/{n_seeds}: "
+                f"early-stop val PR-AUC={training_result['best_score']:.4f} "
+                f"at epoch {training_result['best_epoch']}"
+            )
+
         test_probabilities = predict_with_trained_state(
-            X_test=X_test,
-            input_dim=X_train.shape[1],
+            X_test=X_test_final,
+            input_dim=X_test_final.shape[1],
             hp=best_hp,
             state_dict=training_result["best_state"],
             device=device,
@@ -718,20 +879,12 @@ def retrain_ensemble_and_evaluate_test(
 
         all_test_probabilities.append(test_probabilities)
 
-        seed_result = {
+        seed_results.append({
             "seed": current_seed,
-            "val_pr_auc": training_result["best_score"],
             "best_epoch": training_result["best_epoch"],
+            "best_score": training_result["best_score"],
             "hidden_layers": training_result["hidden_layers"],
-        }
-
-        seed_results.append(seed_result)
-
-        if logger is not None:
-            logger.info(
-                f"  Seed {seed_id + 1}/{n_seeds}: "
-                f"early-stop val PR-AUC={training_result['best_score']:.4f}"
-            )
+        })
 
     ensemble_probabilities = np.mean(
         all_test_probabilities,
@@ -756,16 +909,7 @@ def retrain_ensemble_and_evaluate_test(
 # Full nested random-search pipeline
 # -------------------------------------------------------------------------
 
-def run_nested_random_search(
-    cfg,
-    folds_tensors,
-    search_space,
-    fixed_hp,
-    n_iter,
-    n_seeds,
-    device,
-    seed=42,
-    logger=None,
+def run_nested_random_search( cfg, folds_tensors, search_space, fixed_hp, n_iter, n_seeds, device, seed=42, logger=None,
 ):
     """
     Run nested CV with random search and final ensemble evaluation.
@@ -783,11 +927,15 @@ def run_nested_random_search(
 
         X_train = folds_tensors[fold_idx]["X_train"]
         y_train = folds_tensors[fold_idx]["y_train"]
+        X_test  = folds_tensors[fold_idx]["X_test"]
+        y_test  = folds_tensors[fold_idx]["y_test"]
 
-        X_test = folds_tensors[fold_idx]["X_test"]
-        y_test = folds_tensors[fold_idx]["y_test"]
+        scale_features = folds_tensors[fold_idx].get(
+            "scale_features",
+            False,
+        )
 
-        best_hp, best_inner_score, search_results = run_random_search_for_fold(
+        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = run_random_search_for_fold(
             X_train=X_train,
             y_train=y_train,
             fold_idx=fold_idx,
@@ -798,12 +946,14 @@ def run_nested_random_search(
             device=device,
             seed=seed,
             logger=logger,
+            scale_features=scale_features,
         )
 
         if logger is not None:
             logger.info(
                 f"[Fold {fold_idx}] "
-                f"Best inner PR-AUC: {best_inner_score:.4f}"
+                f"Best inner PR-AUC: {best_inner_score:.4f} | "
+                f"inner train-loss diagnostic: {best_train_loss_diagnostic:.4f}"
             )
 
         final_result = retrain_ensemble_and_evaluate_test(
@@ -812,11 +962,13 @@ def run_nested_random_search(
             X_test=X_test,
             y_test=y_test,
             best_hp=best_hp,
+            best_train_loss_diagnostic=best_train_loss_diagnostic,
             fold_idx=fold_idx,
             n_seeds=n_seeds,
             device=device,
             seed=seed,
             logger=logger,
+            scale_features=scale_features,
         )
 
         if logger is not None:
@@ -829,6 +981,156 @@ def run_nested_random_search(
             "fold": fold_idx,
             "best_hp": best_hp,
             "inner_score": best_inner_score,
+            "best_train_loss_diagnostic": best_train_loss_diagnostic,
+            "test_metrics": final_result["test_metrics"],
+            "test_probabilities": final_result["test_probabilities"],
+            "seed_results": final_result["seed_results"],
+            "search_results": search_results,
+        }
+
+        fold_results.append(fold_result)
+
+    return fold_results
+
+
+# -------------------------------------------------------------------------
+# Grid search
+# -------------------------------------------------------------------------
+
+def run_grid_search_for_fold( X_train, y_train, fold_idx, cfg, grid, fixed_hp, device, seed, logger=None, scale_features=False,
+):
+    """
+    Evaluate every configuration in a fixed grid with inner stratified CV.
+
+    grid must be a list of dictionaries.
+    """
+
+    search_results = []
+
+    for iteration, hp in enumerate(grid):
+        start_time = time.time()
+
+        mean_inner_score, mean_train_loss_at_best = evaluate_hyperparameters_inner_cv(
+            X_train=X_train,
+            y_train=y_train,
+            hp=hp,
+            fixed_hp=fixed_hp,
+            inner_k=cfg["inner_k"],
+            device=device,
+            seed=seed + fold_idx,
+            scale_features=scale_features,
+        )
+
+        elapsed_time = time.time() - start_time
+
+        result = {
+            "hp": hp,
+            "score": mean_inner_score,
+            "mean_train_loss_at_best": mean_train_loss_at_best,
+        }
+
+        search_results.append(result)
+
+        if logger is not None:
+            logger.info(
+                f"  [{iteration + 1}/{len(grid)}] "
+                f"inner PR-AUC={mean_inner_score:.4f} "
+                f"({elapsed_time:.0f}s) | "
+                f"lr={hp['lr']:.0e} "
+                f"dropout={hp['dropout']} "
+                f"wd={hp['weight_decay']:.0e}"
+            )
+
+    search_results.sort(
+        key=lambda item: item["score"],
+        reverse=True,
+    )
+
+    best_result = search_results[0]
+
+    best_hp = {
+        **best_result["hp"],
+        **fixed_hp,
+    }
+
+    best_score = best_result["score"]
+    best_train_loss_diagnostic = best_result["mean_train_loss_at_best"]
+
+    return best_hp, best_score, best_train_loss_diagnostic, search_results
+
+
+def run_nested_grid_search( cfg, folds_tensors, grid, fixed_hp, n_seeds, device, seed=42, logger=None,
+):
+    """
+    Run nested CV with grid search and final ensemble evaluation.
+    """
+
+    fold_results = []
+
+    for fold_idx in cfg["outer_folds"]:
+        if logger is not None:
+            logger.info(
+                f"\n{'=' * 60}\n"
+                f"GRID SEARCH — OUTER FOLD {fold_idx}\n"
+                f"{'=' * 60}"
+            )
+
+        X_train = folds_tensors[fold_idx]["X_train"]
+        y_train = folds_tensors[fold_idx]["y_train"]
+        X_test  = folds_tensors[fold_idx]["X_test"]
+        y_test  = folds_tensors[fold_idx]["y_test"]
+
+        scale_features = folds_tensors[fold_idx].get(
+            "scale_features",
+            False,
+        )
+
+        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = run_grid_search_for_fold(
+            X_train=X_train,
+            y_train=y_train,
+            fold_idx=fold_idx,
+            cfg=cfg,
+            grid=grid,
+            fixed_hp=fixed_hp,
+            device=device,
+            seed=seed,
+            logger=logger,
+            scale_features=scale_features,
+        )
+
+        if logger is not None:
+            logger.info(
+                f"[Fold {fold_idx}] "
+                f"Best grid PR-AUC: {best_inner_score:.4f} | "
+                f"inner train-loss diagnostic: {best_train_loss_diagnostic:.4f}"
+            )
+
+        final_result = retrain_ensemble_and_evaluate_test(
+            X_train=X_train,
+            y_train=y_train,
+            X_test=X_test,
+            y_test=y_test,
+            best_hp=best_hp,
+            best_train_loss_diagnostic=best_train_loss_diagnostic,
+            fold_idx=fold_idx,
+            n_seeds=n_seeds,
+            device=device,
+            seed=seed,
+            logger=logger,
+            scale_features=scale_features,
+        )
+
+        if logger is not None:
+            logger.info(
+                f"[Fold {fold_idx}] "
+                f"Test metrics: {final_result['test_metrics']}"
+            )
+
+        fold_result = {
+            "fold": fold_idx,
+            "best_hp": best_hp,
+            "inner_score": best_inner_score,
+            "best_train_loss_diagnostic": best_train_loss_diagnostic,
             "test_metrics": final_result["test_metrics"],
             "test_probabilities": final_result["test_probabilities"],
             "seed_results": final_result["seed_results"],
@@ -901,273 +1203,3 @@ def print_final_results(fold_results, title="MLP RESULTS"):
         )
 
     return aggregated_metrics
-
-# -------------------------------------------------------------------------
-# Grid search
-# -------------------------------------------------------------------------
-
-def run_grid_search_for_fold(
-    X_train,
-    y_train,
-    fold_idx,
-    cfg,
-    grid,
-    fixed_hp,
-    device,
-    seed,
-    logger=None,
-):
-    """
-    Evaluate every configuration in a fixed grid with inner stratified CV.
-    Same logic as run_random_search_for_fold but iterates over a list
-    instead of sampling randomly.
-    """
-
-    search_results = []
-
-    for iteration, hp in enumerate(grid):
-
-        start_time = time.time()
-
-        mean_inner_score = evaluate_hyperparameters_inner_cv(
-            X_train=X_train,
-            y_train=y_train,
-            hp=hp,
-            fixed_hp=fixed_hp,
-            inner_k=cfg["inner_k"],
-            device=device,
-            seed=seed + fold_idx,
-        )
-
-        elapsed_time = time.time() - start_time
-
-        result = {
-            "hp": hp,
-            "score": mean_inner_score,
-        }
-
-        search_results.append(result)
-
-        if logger is not None:
-            logger.info(
-                f"  [{iteration + 1}/{len(grid)}] "
-                f"inner PR-AUC={mean_inner_score:.4f} "
-                f"({elapsed_time:.0f}s) | "
-                f"lr={hp['lr']:.0e} "
-                f"dropout={hp['dropout']} "
-                f"wd={hp['weight_decay']:.0e}"
-            )
-
-    search_results.sort(
-        key=lambda item: item["score"],
-        reverse=True,
-    )
-
-    best_result = search_results[0]
-
-    best_hp = {
-        **best_result["hp"],
-        **fixed_hp,
-    }
-
-    best_score = best_result["score"]
-
-    return best_hp, best_score, search_results
-
-
-def run_nested_grid_search(
-    cfg,
-    folds_tensors,
-    grid,
-    fixed_hp,
-    n_seeds,
-    device,
-    seed=42,
-    logger=None,
-):
-    """
-    Run nested CV with grid search and final ensemble evaluation.
-    Drop-in replacement for run_nested_random_search.
-    """
-
-    fold_results = []
-
-    for fold_idx in cfg["outer_folds"]:
-
-        if logger is not None:
-            logger.info(
-                f"\n{'=' * 60}\n"
-                f"GRID SEARCH — OUTER FOLD {fold_idx}\n"
-                f"{'=' * 60}"
-            )
-
-        X_train = folds_tensors[fold_idx]["X_train"]
-        y_train = folds_tensors[fold_idx]["y_train"]
-        X_test  = folds_tensors[fold_idx]["X_test"]
-        y_test  = folds_tensors[fold_idx]["y_test"]
-
-        best_hp, best_inner_score, search_results = run_grid_search_for_fold(
-            X_train=X_train,
-            y_train=y_train,
-            fold_idx=fold_idx,
-            cfg=cfg,
-            grid=grid,
-            fixed_hp=fixed_hp,
-            device=device,
-            seed=seed,
-            logger=logger,
-        )
-
-        if logger is not None:
-            logger.info(
-                f"[Fold {fold_idx}] "
-                f"Best grid PR-AUC: {best_inner_score:.4f} | "
-                f"lr={best_hp['lr']:.0e} "
-                f"dropout={best_hp['dropout']} "
-                f"wd={best_hp['weight_decay']:.0e}"
-            )
-
-        final_result = retrain_ensemble_and_evaluate_test(
-            X_train=X_train,
-            y_train=y_train,
-            X_test=X_test,
-            y_test=y_test,
-            best_hp=best_hp,
-            fold_idx=fold_idx,
-            n_seeds=n_seeds,
-            device=device,
-            seed=seed,
-            logger=logger,
-        )
-
-        if logger is not None:
-            logger.info(
-                f"[Fold {fold_idx}] "
-                f"Test metrics: {final_result['test_metrics']}"
-            )
-
-        fold_result = {
-            "fold":              fold_idx,
-            "best_hp":           best_hp,
-            "inner_score":       best_inner_score,
-            "test_metrics":      final_result["test_metrics"],
-            "test_probabilities": final_result["test_probabilities"],
-            "seed_results":      final_result["seed_results"],
-            "search_results":    search_results,
-        }
-
-        fold_results.append(fold_result)
-
-    return fold_results
-
-
-# -------------------------------------------------------------------------
-# RDKit descriptors: scaling per fold
-# -------------------------------------------------------------------------
-
-from sklearn.preprocessing import StandardScaler
-
-def prepare_scaled_fold_tensors(cfg, folds_data, logger=None):
-    folds_tensors = {}
-
-    for fold_idx in cfg["outer_folds"]:
-        train_df = folds_data[fold_idx]["train"]
-        test_df  = folds_data[fold_idx]["test"]
-
-        train_cache = get_feature_cache_path(
-            cfg["task"], cfg["dataset"], cfg["fp_type"], "train", fold_idx,
-        )
-        test_cache = get_feature_cache_path(
-            cfg["task"], cfg["dataset"], cfg["fp_type"], "test", fold_idx,
-        )
-
-        X_train_np = compute_fingerprints(
-            train_df["smiles"].tolist(), cfg["fp_type"], train_cache,
-        )
-        X_test_np = compute_fingerprints(
-            test_df["smiles"].tolist(), cfg["fp_type"], test_cache,
-        )
-
-        # Fit solo sul training fold — nessun leakage
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train_np)
-        X_test_scaled  = scaler.transform(X_test_np)
-
-        X_train = torch.from_numpy(X_train_scaled).float()
-        X_test  = torch.from_numpy(X_test_scaled).float()
-        y_train = torch.from_numpy(train_df["value"].values).float()
-        y_test  = torch.from_numpy(test_df["value"].values).float()
-
-        folds_tensors[fold_idx] = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test":  X_test,
-            "y_test":  y_test,
-            "scaler":  scaler,
-        }
-
-        if logger is not None:
-            logger.info(
-                f"Fold {fold_idx} | "
-                f"X_train: {tuple(X_train.shape)}, "
-                f"X_test: {tuple(X_test.shape)} | "
-                f"StandardScaler fitted on train only"
-            )
-
-    return folds_tensors
-
-
-def prepare_scaled_fold_tensors(cfg, folds_data, logger=None):
-    """
-    Like prepare_all_fold_tensors but with StandardScaler fitted on
-    each training fold independently. Use this for rdkit_desc.
-    Scaler is fitted on train, then applied to test — no leakage.
-    """
-
-    folds_tensors = {}
-
-    for fold_idx in cfg["outer_folds"]:
-
-        train_df = folds_data[fold_idx]["train"]
-        test_df  = folds_data[fold_idx]["test"]
-
-        train_cache = get_feature_cache_path(
-            cfg["task"], cfg["dataset"], cfg["fp_type"], "train", fold_idx,
-        )
-        test_cache = get_feature_cache_path(
-            cfg["task"], cfg["dataset"], cfg["fp_type"], "test", fold_idx,
-        )
-
-        X_train_np = compute_fingerprints(
-            train_df["smiles"].tolist(), cfg["fp_type"], train_cache,
-        )
-        X_test_np = compute_fingerprints(
-            test_df["smiles"].tolist(), cfg["fp_type"], test_cache,
-        )
-
-        # Fit scaler on training fold only, then apply to test
-        scaler, X_train_scaled = fit_scaler_on_train(X_train_np)
-        X_test_scaled = apply_scaler(X_test_np, scaler)
-
-        X_train = torch.from_numpy(X_train_scaled).float()
-        X_test  = torch.from_numpy(X_test_scaled).float()
-        y_train = torch.from_numpy(train_df["value"].values).float()
-        y_test  = torch.from_numpy(test_df["value"].values).float()
-
-        folds_tensors[fold_idx] = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test":  X_test,
-            "y_test":  y_test,
-            "scaler":  scaler,   # salvato nel caso serva dopo
-        }
-
-        if logger is not None:
-            logger.info(
-                f"Fold {fold_idx} | "
-                f"X_train: {tuple(X_train.shape)}, "
-                f"X_test: {tuple(X_test.shape)} | "
-                f"scaled with per-fold StandardScaler"
-            )
-
-    return folds_tensors
