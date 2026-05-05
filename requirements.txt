@@ -1,0 +1,33 @@
+# Drug Discovery Lo-Hi — Python dependencies
+# Tested with Python 3.10+ on Linux (Ubuntu) with CUDA 11.8 / 12.x.
+
+# --- Core scientific stack ---
+numpy>=1.26
+pandas>=2.0
+scipy>=1.11
+scikit-learn>=1.4
+
+# --- Cheminformatics ---
+rdkit>=2023.9.1
+
+# --- Deep learning (MLP notebooks) ---
+# Install the build matching your CUDA version.
+# Example (CUDA 12.1): pip install torch --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1
+
+# --- Gradient boosting (optional, for the `xgb` model in train_model.py) ---
+xgboost>=2.0
+
+# --- Configuration & I/O ---
+PyYAML>=6.0
+
+# --- Notebooks ---
+jupyterlab>=4.0
+ipykernel>=6.25
+notebook>=7.0
+
+# --- Plotting (used in some exploratory notebooks) ---
+matplotlib>=3.7
+
+# --- Utilities ---
+tqdm>=4.65

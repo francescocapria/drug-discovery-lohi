@@ -74,7 +74,6 @@ def load_config(config_path: str) -> Dict[str, Any]:
         raise ValueError(f"experiment.task must be 'hi' or 'lo', got '{exp['task']}'")
 
     # Validate fingerprint section
-    # Validate fingerprint section
     fp = cfg["fingerprint"]
     if "type" not in fp and "types" not in fp:
         raise ValueError("fingerprint.type or fingerprint.types is required")
