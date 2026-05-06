@@ -47,7 +47,7 @@ splits are taken from the original benchmark repository.
   performed separately for each outer fold.
 
 - **Additional models.**
-Beyond the SVM kernels from the original paper (linear, polynomial, RBF, Tanimoto), the repository also evaluates Logistic Regression, Decision Tree, Random Forest, and XGBoost.
+In addition to the models evaluated in the original paper, the repository also tests Logistic Regression, Decision Tree, Random Forest, XGBoost, and SVM with linear, polynomial, and Tanimoto kernels.
 
 - **Improved MLP pipeline.**  
   The MLP implementation supports configurable depth and width, flat or pyramidal
