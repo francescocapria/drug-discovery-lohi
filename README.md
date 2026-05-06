@@ -46,8 +46,8 @@ splits are taken from the original benchmark repository.
   Classical models are evaluated with more systematic grid or random searches,
   performed separately for each outer fold.
 
-- **Additional SVM variants.**  
-  The repository evaluates linear, polynomial, RBF and Tanimoto SVM kernels.
+- **Additional models.**
+Beyond the SVM kernels from the original paper (linear, polynomial, RBF, Tanimoto), the repository also evaluates Logistic Regression, Decision Tree, Random Forest, and XGBoost.
 
 - **Improved MLP pipeline.**  
   The MLP implementation supports configurable depth and width, flat or pyramidal
