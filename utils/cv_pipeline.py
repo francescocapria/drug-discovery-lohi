@@ -112,9 +112,7 @@ def run_single_fold(
     """
     Execute one outer fold: featurize → inner CV → retrain → evaluate → save.
 
-    Returns
-    -------
-    dict with: best_params, inner_cv_score, test_metrics, train_metrics, time_seconds
+    Returns: dict with: best_params, inner_cv_score, test_metrics, train_metrics, time_seconds
     """
     logger.info(f"\n{'='*60}")
     logger.info(f"FOLD {fold_idx} | {model_name} + {fp_type} | {task}/{dataset}")
@@ -217,9 +215,7 @@ def run_nested_cv(
     """
     Run the full nested cross-validation across all outer folds.
 
-    Returns
-    -------
-    dict with:
+    Returns dict with:
         fold_results    - list of per-fold result dicts
         aggregated      - mean ± std across folds
         experiment_id   - string identifier

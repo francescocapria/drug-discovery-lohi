@@ -1,7 +1,6 @@
 """
 I/O utilities for the Lo-Hi project.
 
-Handles:
 - Loading train/test CSV folds from data/
 - Managing feature cache paths in features/
 - Saving predictions to results/
@@ -50,22 +49,6 @@ def load_fold(
 ) -> tuple:
     """
     Load a train/test fold.
-
-    Parameters
-    ----------
-    task : str
-        "hi" or "lo"
-    dataset : str
-        es. "drd2", "hiv", "kdr", "sol", "kcnh2"
-    fold_idx : int
-        Fold number (1, 2, or 3)
-    data_dir : str, optional
-        Override default data/ directory.
-
-    Returns
-    -------
-    (train_df, test_df) : tuple of DataFrames
-        Each has columns: smiles, value, [cluster for Lo task]
     """
     if data_dir is None:
         data_dir = PROJECT_ROOT / "data"
@@ -171,10 +154,8 @@ def save_params(
 
     Parameters
     ----------
-    params : dict
-        Best hyperparameters from inner CV.
-    extra_info : dict, optional
-        Additional info (inner_cv_score, training_time, etc.)
+    params : Best hyperparameters from inner CV.
+    extra_info : Additional info (inner_cv_score, training_time, etc.)
 
     Returns the path of the saved file.
     """

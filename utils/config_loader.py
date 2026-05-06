@@ -37,14 +37,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
     """
     Load and validate a YAML experiment config.
 
-    Parameters
-    ----------
-    config_path : str or Path
-        Path to the YAML config file.
+    config_path : Path to the YAML config file.
 
-    Returns
-    -------
-    dict with sections: experiment, fingerprint, model, cv
+    Return: dict with sections: experiment, fingerprint, model, cv
     """
     config_path = Path(config_path)
     if not config_path.exists():
@@ -53,7 +48,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
-    # Validate required sections
+    # Validate 
     for section in ["experiment", "fingerprint", "model"]:
         if section not in cfg:
             raise ValueError(f"Config missing required section: '{section}'")

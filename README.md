@@ -236,7 +236,7 @@ All metric definitions are in `utils/metrics.py`.
 
 # Results
 
-## Hi Task (Hit Identification) — PR-AUC ↑
+## Hi Task (Hit Identification) — PR-AUC 
 
 | Model | DRD2-Hi | HIV-Hi | KDR-Hi | Sol-Hi |
 |---|---:|---:|---:|---:|
@@ -272,7 +272,7 @@ All metric definitions are in `utils/metrics.py`.
 
 ---
 
-## Lo Task (Lead Optimization) — Mean Spearman ↑
+## Lo Task (Lead Optimization) — Mean Spearman 
 
 | Model | DRD2-Lo | KCNH2-Lo | KDR-Lo |
 |---|---:|---:|---:|

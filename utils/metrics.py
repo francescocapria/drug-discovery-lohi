@@ -42,19 +42,8 @@ def get_hi_metrics(
     """
     Compute metrics for the Hi (Hit Identification) task.
 
-    Parameters
-    ----------
-    y_true : array-like of shape (n_samples,)
-        Ground truth binary labels (0/1).
-    y_score : array-like of shape (n_samples,)
-        Predicted score for the positive class.
-        This can be a probability, a decision function score,
-        or any real-valued ranking score.
-
-    Returns
-    -------
-    dict
-        Dictionary containing Hi evaluation metrics.
+    y_true : Ground truth binary labels (0/1).
+    y_score : Predicted score for the positive class.
     """
     y_true = np.asarray(y_true, dtype=int)
     y_score = np.asarray(y_score, dtype=float)
@@ -108,19 +97,9 @@ def get_lo_metrics(
     """
     Compute metrics for the Lo (Lead Optimization) task.
 
-    Parameters
-    ----------
-    y_true : array-like of shape (n_samples,)
-        Ground truth continuous activity values.
-    y_pred : array-like of shape (n_samples,)
-        Predicted values or scores.
-    cluster_ids : array-like of shape (n_samples,)
-        Cluster identifier for each sample.
-
-    Returns
-    -------
-    dict
-        Dictionary containing Lo evaluation metrics aggregated across clusters.
+    y_true : Ground truth continuous activity values.
+    y_pred : Predicted values or scores.
+    cluster_ids :Cluster identifier for each sample.
     """
     y_true = np.asarray(y_true, dtype=float)
     y_pred = np.asarray(y_pred, dtype=float)
@@ -186,15 +165,7 @@ def aggregate_fold_metrics(
     """
     Aggregate metrics across outer folds.
 
-    Parameters
-    ----------
-    fold_metrics : list of dict
-        One metrics dictionary per outer fold.
-
-    Returns
-    -------
-    dict
-        Mean and standard deviation for each numeric metric.
+    fold_metrics : One metrics dictionary per outer fold.
     """
     all_keys = fold_metrics[0].keys()
     aggregated = {}

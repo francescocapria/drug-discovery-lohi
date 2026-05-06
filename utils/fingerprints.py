@@ -1,5 +1,4 @@
 """
-
 Fingerprint computation
 
 All functions return NumPy arrays of shape (n_molecules, n_features).

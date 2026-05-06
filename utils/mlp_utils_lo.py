@@ -1,5 +1,3 @@
-# utils/mlp_utils_lo.py
-
 import copy
 import time
 import logging
@@ -15,7 +13,6 @@ from utils.io_utils import get_feature_cache_path
 from utils.fingerprints import compute_fingerprints
 from utils.metrics import get_lo_metrics, aggregate_fold_metrics
 
-# Funzioni comuni definite in utils/mlp_utils.py
 from utils.mlp_utils import (
     set_seed,
     build_hidden_layers,
@@ -199,10 +196,7 @@ def inverse_scale_predictions_lo(predictions, target_scaler):
     return predictions * target_scaler["std"] + target_scaler["mean"]
 
 
-def maybe_scale_inner_features_lo(
-    X_inner_train,
-    X_inner_val,
-    scale_features,
+def maybe_scale_inner_features_lo( X_inner_train, X_inner_val, scale_features,
 ):
     """
     Scale features inside one inner-CV split if needed.
@@ -243,10 +237,7 @@ def should_drop_last_for_batchnorm_lo(X, batch_size, batchnorm):
     return last_batch_size == 1
 
 
-def make_holdout_split_lo(
-    n_samples,
-    val_fraction=0.15,
-    seed=42,
+def make_holdout_split_lo( n_samples, val_fraction=0.15, seed=42,
 ):
     """
     Create a simple random train/validation split for final early stopping.
@@ -316,15 +307,7 @@ def evaluate_model_lo(model, X_val, y_val, device):
     return metrics
 
 
-def train_and_evaluate_lo(
-    X_train,
-    y_train,
-    X_val,
-    y_val,
-    cluster_val,
-    hp,
-    device,
-    seed=42,
+def train_and_evaluate_lo( X_train, y_train, X_val, y_val, cluster_val, hp, device, seed=42,
 ):
     """
     Train one MLP for Lo regression.
@@ -463,16 +446,7 @@ def sample_hyperparameters(search_space, rng):
     return hp
 
 
-def evaluate_hyperparameters_inner_cv_lo(
-    X_train,
-    y_train,
-    cluster_train,
-    hp,
-    fixed_hp,
-    inner_k,
-    device,
-    seed,
-    scale_features=False,
+def evaluate_hyperparameters_inner_cv_lo( X_train, y_train, cluster_train, hp, fixed_hp, inner_k, device, seed, scale_features=False,
 ):
     """
     Evaluate one hyperparameter configuration with inner KFold CV.
@@ -535,19 +509,7 @@ def evaluate_hyperparameters_inner_cv_lo(
     return mean_score, mean_train_loss_at_best
 
 
-def run_random_search_for_fold_lo(
-    X_train,
-    y_train,
-    cluster_train,
-    fold_idx,
-    cfg,
-    search_space,
-    fixed_hp,
-    n_iter,
-    device,
-    seed,
-    logger=None,
-    scale_features=False,
+def run_random_search_for_fold_lo( X_train, y_train, cluster_train, fold_idx, cfg, search_space, fixed_hp, n_iter, device, seed, logger=None, scale_features=False,
 ):
     """
     Run random search inside one outer Lo fold.
@@ -624,12 +586,7 @@ def run_random_search_for_fold_lo(
 # Final retraining and test evaluation
 # -------------------------------------------------------------------------
 
-def predict_with_trained_state_lo(
-    X_test,
-    input_dim,
-    hp,
-    state_dict,
-    device,
+def predict_with_trained_state_lo( X_test, input_dim, hp, state_dict, device,
 ):
     """
     Rebuild the model, load saved weights, and predict continuous values.
@@ -652,21 +609,7 @@ def predict_with_trained_state_lo(
     return predictions
 
 
-def retrain_ensemble_and_evaluate_test_lo(
-    X_train,
-    y_train,
-    X_test,
-    y_test,
-    cluster_train,
-    cluster_test,
-    best_hp,
-    best_train_loss_diagnostic,
-    fold_idx,
-    n_seeds,
-    device,
-    seed,
-    logger=None,
-    scale_features=False,
+def retrain_ensemble_and_evaluate_test_lo( X_train, y_train, X_test, y_test, cluster_train, cluster_test, best_hp, best_train_loss_diagnostic, fold_idx, n_seeds, device, seed, logger=None, scale_features=False,
 ):
     """
     Retrain the best Lo configuration with multiple seeds and evaluate
@@ -786,17 +729,7 @@ def retrain_ensemble_and_evaluate_test_lo(
 # Full nested random-search pipeline
 # -------------------------------------------------------------------------
 
-def run_nested_random_search_lo(
-    cfg,
-    folds_tensors,
-    folds_data,
-    search_space,
-    fixed_hp,
-    n_iter,
-    n_seeds,
-    device,
-    seed=42,
-    logger=None,
+def run_nested_random_search_lo( cfg, folds_tensors, folds_data, search_space, fixed_hp, n_iter, n_seeds, device, seed=42, logger=None,
 ):
     """
     Run nested CV with random search for the Lo task.
