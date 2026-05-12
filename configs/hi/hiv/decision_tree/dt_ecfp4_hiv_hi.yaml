@@ -2,22 +2,42 @@ experiment:
   name: dt_ecfp4_hiv_hi
   task: hi
   dataset: hiv
-
 fingerprint:
   type: ecfp4
-
 model:
   name: dt
   fixed:
     random_state: 42
   search:
-    max_depth: [3, 5, 7, 10, 15, 20, null]
-    min_samples_split: [2, 5, 10, 20]
-    min_samples_leaf: [1, 2, 5, 10]
-    criterion: [gini, entropy]
-    class_weight: [null, balanced]
-    max_features: [sqrt, log2, null]
-
+    max_depth:
+    - 3
+    - 5
+    - 8
+    - 10
+    - 15
+    - null
+    min_samples_split:
+    - 10
+    - 20
+    - 50
+    min_samples_leaf:
+    - 5
+    - 10
+    - 20
+    - 50
+    criterion:
+    - gini
+    - entropy
+    class_weight:
+    - null
+    - balanced
+    max_features:
+    - sqrt
+    - log2
+    ccp_alpha:
+    - 0.0
+    - 0.0001
+    - 0.001
 cv:
   inner_k: 2
   scoring: average_precision

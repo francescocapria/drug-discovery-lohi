@@ -73,7 +73,6 @@ data/interim/
 # =========================
 # Results / outputs
 # =========================
-results/
 outputs/
 logs/
 runs/

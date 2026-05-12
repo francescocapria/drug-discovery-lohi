@@ -1,0 +1,22 @@
+{
+  "fold": 3,
+  "best_params": {
+    "model__fit_intercept": true
+  },
+  "inner_cv_score": -1.706192079407986,
+  "train_metrics": {
+    "mean_spearman": 0.7923,
+    "std_spearman": 0.0,
+    "mean_r2": 0.6153,
+    "mean_mae": 0.4199,
+    "n_clusters": 1
+  },
+  "test_metrics": {
+    "mean_spearman": 0.0105,
+    "std_spearman": 0.4127,
+    "mean_r2": -2.5806,
+    "mean_mae": 1.0186,
+    "n_clusters": 54
+  },
+  "time_seconds": 1.0
+}

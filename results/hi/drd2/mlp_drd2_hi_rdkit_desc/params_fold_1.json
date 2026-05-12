@@ -1,0 +1,56 @@
+{
+  "fold": 1,
+  "best_params": {
+    "n_layers": 2,
+    "n_nodes": 256,
+    "r": 0.5,
+    "activation": "leaky_relu",
+    "dropout": 0.2,
+    "batchnorm": false,
+    "init": "xavier",
+    "lr": 0.001,
+    "weight_decay": 0.005,
+    "batch_size": 128,
+    "max_epochs": 100,
+    "patience": 10,
+    "grad_clip": 1.0
+  },
+  "inner_cv_score": 0.9315,
+  "inner_train_loss_diagnostic": 0.11002644101275554,
+  "test_metrics": {
+    "pr_auc": 0.7191,
+    "roc_auc": 0.6382,
+    "bedroc": 0.8563,
+    "f1_at_05": 0.724,
+    "positive_rate": 0.6176
+  },
+  "seed_results": [
+    {
+      "seed": 142,
+      "best_epoch": 23,
+      "best_score": 0.9432,
+      "hidden_layers": [
+        171,
+        85
+      ]
+    },
+    {
+      "seed": 143,
+      "best_epoch": 21,
+      "best_score": 0.9433,
+      "hidden_layers": [
+        171,
+        85
+      ]
+    },
+    {
+      "seed": 144,
+      "best_epoch": 21,
+      "best_score": 0.9279,
+      "hidden_layers": [
+        171,
+        85
+      ]
+    }
+  ]
+}

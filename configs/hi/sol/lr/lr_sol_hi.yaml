@@ -2,21 +2,34 @@ experiment:
   name: lr_maccs_sol_hi
   task: hi
   dataset: sol
-
 fingerprint:
-  types: [ecfp4, maccs, rdkit_desc]
-
+  types:
+  - ecfp4
+  - maccs
+  - rdkit_desc
 model:
   name: lr
   fixed:
     max_iter: 15000
     random_state: 42
     solver: saga
+    penalty: elasticnet
   search:
-    C: [0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
-    l1_ratio: [0.0, 1.0]
-    class_weight: [null, balanced]
-
+    C:
+    - 0.005
+    - 0.01
+    - 0.05
+    - 0.1
+    - 0.5
+    - 1.0
+    - 5.0
+    - 10.0
+    l1_ratio:
+    - 0.0
+    - 1.0
+    class_weight:
+    - null
+    - balanced
 cv:
   inner_k: 2
   scoring: average_precision

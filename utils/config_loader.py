@@ -25,6 +25,8 @@ DEFAULTS = {
         "search_strategy": "grid",
         "n_iter": 50,
         "random_state": 42,
+        "inner_split_strategy": "kfold",       # "kfold" | "holdout" | "random_shuffle"
+        "holdout_val_fraction": 0.2,            # only with random_shuffle
     }
 }
 
@@ -67,6 +69,14 @@ def load_config(config_path: str) -> Dict[str, Any]:
             raise ValueError(f"experiment.{key} is required")
     if exp["task"] not in ("hi", "lo"):
         raise ValueError(f"experiment.task must be 'hi' or 'lo', got '{exp['task']}'")
+    
+    # Validate inner split strategy
+    valid_strategies = ("kfold", "holdout", "random_shuffle")
+    strategy = cfg["cv"].get("inner_split_strategy", "kfold")
+    if strategy not in valid_strategies:
+        raise ValueError(
+            f"cv.inner_split_strategy must be one of {valid_strategies}, got '{strategy}'"
+        )
 
     # Validate fingerprint section
     fp = cfg["fingerprint"]

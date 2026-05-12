@@ -1,0 +1,26 @@
+{
+  "fold": 1,
+  "best_params": {
+    "subsample": 0.8,
+    "n_estimators": 200,
+    "max_depth": 6,
+    "learning_rate": 0.05,
+    "colsample_bytree": 1.0
+  },
+  "inner_cv_score": -0.5605214503687601,
+  "train_metrics": {
+    "mean_spearman": 0.9744,
+    "std_spearman": 0.0,
+    "mean_r2": 0.9306,
+    "mean_mae": 0.1882,
+    "n_clusters": 1
+  },
+  "test_metrics": {
+    "mean_spearman": 0.0795,
+    "std_spearman": 0.4583,
+    "mean_r2": -1.7404,
+    "mean_mae": 0.9071,
+    "n_clusters": 54
+  },
+  "time_seconds": 388.4
+}

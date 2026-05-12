@@ -1,0 +1,23 @@
+{
+  "fold": 3,
+  "best_params": {
+    "model__C": 2.0,
+    "model__epsilon": 0.1
+  },
+  "inner_cv_score": -0.4493658888350436,
+  "train_metrics": {
+    "mean_spearman": 0.9071,
+    "std_spearman": 0.0,
+    "mean_r2": 0.8319,
+    "mean_mae": 0.2285,
+    "n_clusters": 1
+  },
+  "test_metrics": {
+    "mean_spearman": 0.3071,
+    "std_spearman": 0.4796,
+    "mean_r2": -0.5846,
+    "mean_mae": 0.7756,
+    "n_clusters": 50
+  },
+  "time_seconds": 0.8
+}

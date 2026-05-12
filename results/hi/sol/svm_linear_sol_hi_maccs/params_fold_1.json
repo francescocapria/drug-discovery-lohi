@@ -1,0 +1,23 @@
+{
+  "fold": 1,
+  "best_params": {
+    "C": 0.1,
+    "class_weight": "balanced"
+  },
+  "inner_cv_score": 0.4645240102750297,
+  "train_metrics": {
+    "pr_auc": 0.5792,
+    "roc_auc": 0.8523,
+    "bedroc": 0.6703,
+    "f1_at_05": 0.2878,
+    "positive_rate": 0.2136
+  },
+  "test_metrics": {
+    "pr_auc": 0.5065,
+    "roc_auc": 0.8058,
+    "bedroc": 0.5831,
+    "f1_at_05": 0.3636,
+    "positive_rate": 0.2191
+  },
+  "time_seconds": 3.0
+}

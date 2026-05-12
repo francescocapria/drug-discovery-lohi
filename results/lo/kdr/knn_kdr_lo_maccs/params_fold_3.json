@@ -1,0 +1,24 @@
+{
+  "fold": 3,
+  "best_params": {
+    "metric": "euclidean",
+    "n_neighbors": 3,
+    "weights": "distance"
+  },
+  "inner_cv_score": -0.5787433392949832,
+  "train_metrics": {
+    "mean_spearman": 0.9973,
+    "std_spearman": 0.0,
+    "mean_r2": 0.995,
+    "mean_mae": 0.011,
+    "n_clusters": 1
+  },
+  "test_metrics": {
+    "mean_spearman": 0.0227,
+    "std_spearman": 0.4268,
+    "mean_r2": -1.4265,
+    "mean_mae": 0.9019,
+    "n_clusters": 54
+  },
+  "time_seconds": 0.2
+}

@@ -72,11 +72,13 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     elif name == "svm":
         from sklearn.svm import SVC, SVR
 
-        # Scaling only for rdkit_desc
-        use_scaling = fp_type == "rdkit_desc" or task == "lo"
-
-        # tanimoto kernel 
+        # tanimoto kernel
         kernel_type = fixed.get("kernel")
+
+        # Scaling: always for rdkit_desc, for Lo binary fingerprints
+        # except Tanimoto which must operate on unscaled binary fingerprints
+        use_scaling = fp_type == "rdkit_desc" or (task == "lo" and kernel_type != "tanimoto")
+
         if kernel_type == "tanimoto":
             fixed = {k: v for k, v in fixed.items() if k != "kernel"}
             kernel_arg = tanimoto_kernel
@@ -259,6 +261,8 @@ def main():
             n_iter=cfg["cv"]["n_iter"],
             random_state=cfg["cv"]["random_state"],
             folds=args.folds,
+            inner_split_strategy=cfg["cv"]["inner_split_strategy"],
+            holdout_val_fraction=cfg["cv"]["holdout_val_fraction"],
         )
 
         # Summary
