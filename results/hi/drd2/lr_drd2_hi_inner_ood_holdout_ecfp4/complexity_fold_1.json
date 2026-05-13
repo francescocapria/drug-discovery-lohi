@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_drd2_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 376,
+  "sparsity": 0.6328125,
+  "l1_norm": 60.24665210415013,
+  "l2_norm": 4.033987412260196,
+  "approx_margin": 0.24789368379305665,
+  "intercept": [
+    -3.0853968987198948
+  ],
+  "C": 0.1,
+  "class_weight": "balanced",
+  "penalty": "deprecated",
+  "l1_ratio": 0.25,
+  "dual": false
+}

@@ -27,6 +27,12 @@ DEFAULTS = {
         "random_state": 42,
         "inner_split_strategy": "kfold",       # "kfold" | "holdout" | "random_shuffle"
         "holdout_val_fraction": 0.2,            # only with random_shuffle
+    },
+    "artifacts": {
+        "save_model": False,
+        "save_complexity": False,
+        "save_feature_importance": False,
+        "save_cv_results": False,
     }
 }
 
@@ -50,7 +56,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
-    # Validate 
+    # Validate
     for section in ["experiment", "fingerprint", "model"]:
         if section not in cfg:
             raise ValueError(f"Config missing required section: '{section}'")
@@ -62,6 +68,13 @@ def load_config(config_path: str) -> Dict[str, Any]:
         if key not in cfg["cv"]:
             cfg["cv"][key] = default_val
 
+    # Fill defaults for artifacts section
+    if "artifacts" not in cfg:
+        cfg["artifacts"] = {}
+    for key, default_val in DEFAULTS["artifacts"].items():
+        if key not in cfg["artifacts"]:
+            cfg["artifacts"][key] = default_val
+
     # Validate experiment section
     exp = cfg["experiment"]
     for key in ["task", "dataset"]:
@@ -69,7 +82,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
             raise ValueError(f"experiment.{key} is required")
     if exp["task"] not in ("hi", "lo"):
         raise ValueError(f"experiment.task must be 'hi' or 'lo', got '{exp['task']}'")
-    
+
     # Validate inner split strategy
     valid_strategies = ("kfold", "holdout", "random_shuffle")
     strategy = cfg["cv"].get("inner_split_strategy", "kfold")
@@ -77,6 +90,19 @@ def load_config(config_path: str) -> Dict[str, Any]:
         raise ValueError(
             f"cv.inner_split_strategy must be one of {valid_strategies}, got '{strategy}'"
         )
+
+    # Validate artifacts section
+    valid_artifact_keys = set(DEFAULTS["artifacts"].keys())
+    for key in cfg["artifacts"]:
+        if key not in valid_artifact_keys:
+            raise ValueError(
+                f"artifacts.{key} is not supported. "
+                f"Valid keys are: {sorted(valid_artifact_keys)}"
+            )
+
+    for key, value in cfg["artifacts"].items():
+        if not isinstance(value, bool):
+            raise ValueError(f"artifacts.{key} must be true or false, got {value}")
 
     # Validate fingerprint section
     fp = cfg["fingerprint"]

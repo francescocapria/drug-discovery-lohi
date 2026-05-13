@@ -5,7 +5,9 @@
     "n_neighbors": 7,
     "weights": "distance"
   },
-  "inner_cv_score": -0.3730187737267011,
+  "inner_split_strategy": "kfold",
+  "inner_selection_score": -0.3730187737267011,
+  "inner_train_score": -0.02632466715587527,
   "train_metrics": {
     "mean_spearman": 0.9656,
     "std_spearman": 0.0,
@@ -20,5 +22,5 @@
     "mean_mae": 0.9299,
     "n_clusters": 34
   },
-  "time_seconds": 0.6
+  "time_seconds": 0.9
 }

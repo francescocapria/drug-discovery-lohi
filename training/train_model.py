@@ -263,6 +263,7 @@ def main():
             folds=args.folds,
             inner_split_strategy=cfg["cv"]["inner_split_strategy"],
             holdout_val_fraction=cfg["cv"]["holdout_val_fraction"],
+            artifacts=cfg.get("artifacts", {})
         )
 
         # Summary

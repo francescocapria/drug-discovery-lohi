@@ -7,7 +7,9 @@
     "model__coef0": 0.1,
     "model__C": 50.0
   },
-  "inner_cv_score": -0.5679480362153174,
+  "inner_split_strategy": "kfold",
+  "inner_selection_score": -0.5679480362153174,
+  "inner_train_score": -0.014274157886266545,
   "train_metrics": {
     "mean_spearman": 0.9971,
     "std_spearman": 0.0,

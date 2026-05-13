@@ -1,0 +1,39 @@
+experiment:
+  name: svm_linear_sol_hi
+  task: hi
+  dataset: sol
+fingerprint:
+  types:
+  - ecfp4
+  - maccs
+model:
+  name: svm
+  fixed:
+    kernel: linear
+    probability: false
+  search:
+    C:
+    - 0.001
+    - 0.005
+    - 0.01
+    - 0.05
+    - 0.1
+    - 0.25
+    - 0.5
+    - 1.0
+    - 2.0
+    - 5.0
+    - 10.0
+    - 25.0
+    - 50.0
+    - 100.0
+    class_weight:
+    - null
+    - balanced
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42
+  inner_split_strategy: holdout
+  holdout_val_fraction: 0.2

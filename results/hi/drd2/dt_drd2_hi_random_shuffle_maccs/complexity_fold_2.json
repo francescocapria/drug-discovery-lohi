@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_drd2_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "effective_depth": 20,
+  "n_nodes": 529,
+  "n_leaves": 265,
+  "n_features_used": 102,
+  "used_feature_fraction": 0.6107784431137725,
+  "criterion": "gini",
+  "max_depth": 20,
+  "max_features": "sqrt",
+  "min_samples_leaf": 2,
+  "min_samples_split": 10,
+  "ccp_alpha": 0.0001,
+  "class_weight": null,
+  "feature_min_depth_mean": 6.813725490196078,
+  "feature_min_depth_std": 3.050973461356108,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 16
+}

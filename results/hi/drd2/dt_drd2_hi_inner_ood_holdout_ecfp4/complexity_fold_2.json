@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_drd2_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "effective_depth": 15,
+  "n_nodes": 75,
+  "n_leaves": 38,
+  "n_features_used": 37,
+  "used_feature_fraction": 0.0361328125,
+  "criterion": "gini",
+  "max_depth": 15,
+  "max_features": "log2",
+  "min_samples_leaf": 5,
+  "min_samples_split": 20,
+  "ccp_alpha": 0.001,
+  "class_weight": null,
+  "feature_min_depth_mean": 6.594594594594595,
+  "feature_min_depth_std": 3.9623870737388773,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 14
+}

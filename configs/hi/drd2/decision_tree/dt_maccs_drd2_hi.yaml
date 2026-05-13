@@ -16,7 +16,6 @@ model:
     - 10
     - 15
     - 20
-    - null
     min_samples_split:
     - 2
     - 5

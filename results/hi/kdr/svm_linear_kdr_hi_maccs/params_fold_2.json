@@ -4,20 +4,22 @@
     "C": 0.5,
     "class_weight": null
   },
-  "inner_cv_score": 0.2446334759246429,
+  "inner_split_strategy": "kfold",
+  "inner_selection_score": 0.2446334759246429,
+  "inner_train_score": 0.7466053427975429,
   "train_metrics": {
     "pr_auc": 0.5569,
     "roc_auc": 0.8322,
     "bedroc": 0.8427,
-    "f1_at_05": 0.2857,
+    "f1_at_05": NaN,
     "positive_rate": 0.108
   },
   "test_metrics": {
-    "pr_auc": 0.6964,
+    "pr_auc": 0.6963,
     "roc_auc": 0.4254,
     "bedroc": 0.7907,
-    "f1_at_05": 0.1997,
+    "f1_at_05": NaN,
     "positive_rate": 0.719
   },
-  "time_seconds": 1.0
+  "time_seconds": 0.2
 }

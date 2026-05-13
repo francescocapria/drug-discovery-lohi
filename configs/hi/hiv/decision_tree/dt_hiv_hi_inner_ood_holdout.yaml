@@ -1,0 +1,48 @@
+experiment:
+  name: dt_ecfp4_hiv_hi
+  task: hi
+  dataset: hiv
+fingerprint:
+   types:
+    - ecfp4
+    - maccs
+model:
+  name: dt
+  fixed:
+    random_state: 42
+  search:
+    max_depth:
+    - 3
+    - 5
+    - 8
+    - 10
+    - 15
+    min_samples_split:
+    - 10
+    - 20
+    - 50
+    min_samples_leaf:
+    - 5
+    - 10
+    - 20
+    - 50
+    criterion:
+    - gini
+    - entropy
+    class_weight:
+    - null
+    - balanced
+    max_features:
+    - sqrt
+    - log2
+    ccp_alpha:
+    - 0.0
+    - 0.0001
+    - 0.001
+cv:
+  inner_k: 2
+  scoring: average_precision
+  search_strategy: grid
+  random_state: 42
+  inner_split_strategy: holdout
+  holdout_val_fraction: 0.2

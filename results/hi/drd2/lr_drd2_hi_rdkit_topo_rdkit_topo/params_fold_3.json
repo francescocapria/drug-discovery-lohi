@@ -5,7 +5,9 @@
     "class_weight": "balanced",
     "l1_ratio": 0.0
   },
-  "inner_cv_score": 0.9182765126764914,
+  "inner_split_strategy": "kfold",
+  "inner_selection_score": 0.9182765126764914,
+  "inner_train_score": 0.9791123186354121,
   "train_metrics": {
     "pr_auc": 0.9748,
     "roc_auc": 0.9484,
@@ -20,5 +22,5 @@
     "f1_at_05": 0.6918,
     "positive_rate": 0.6507
   },
-  "time_seconds": 242.8
+  "time_seconds": 283.1
 }
