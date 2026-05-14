@@ -1,0 +1,13 @@
+protocol,fingerprint,fold,C,class_weight,inner_pr_auc,test_pr_auc
+OOD holdout,ECFP4,1,100.0,,0.8531,0.6434
+OOD holdout,ECFP4,2,0.01,balanced,0.6738,0.8613
+OOD holdout,ECFP4,3,0.001,,0.6862,0.755
+Random shuffle,ECFP4,1,0.25,balanced,0.9339,0.6587
+Random shuffle,ECFP4,2,0.1,balanced,0.8724,0.8714
+Random shuffle,ECFP4,3,0.1,balanced,0.9217,0.7873
+OOD holdout,MACCS,1,1.0,,0.8099,0.6489
+OOD holdout,MACCS,2,25.0,balanced,0.7131,0.7832
+OOD holdout,MACCS,3,50.0,balanced,0.7147,0.786
+Random shuffle,MACCS,1,25.0,balanced,0.8789,0.6559
+Random shuffle,MACCS,2,100.0,balanced,0.8417,0.7843
+Random shuffle,MACCS,3,10.0,balanced,0.8817,0.7828

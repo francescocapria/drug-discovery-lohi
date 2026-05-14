@@ -18,7 +18,6 @@ import json
 import joblib
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from sklearn.model_selection import (
     StratifiedKFold,
@@ -37,6 +36,7 @@ from utils.io_utils import (
     save_predictions,
     save_params,
     get_feature_cache_path,
+    get_results_dir,
 )
 
 import logging
@@ -47,17 +47,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Artifact utilities
 # ---------------------------------------------------------------------------
-
-def _get_result_dir(task: str, dataset: str, model_name: str, fp_type: str) -> Path:
-    """
-    Return the result directory used by save_predictions/save_params.
-
-    Expected structure:
-        results/{task}/{dataset}/{model_name}_{fp_type}
-    """
-    result_dir = Path("results") / task / dataset / f"{model_name}_{fp_type}"
-    result_dir.mkdir(parents=True, exist_ok=True)
-    return result_dir
 
 
 def _json_safe(value: Any) -> Any:
@@ -221,10 +210,10 @@ def _extract_complexity_metrics(
             "coefficient_shape": list(coef.shape),
             "n_coefficients": int(coef_flat.shape[0]),
             "n_nonzero_coefficients": nonzero,
-            "sparsity": float(1.0 - nonzero / coef_flat.shape[0]) if coef_flat.shape[0] > 0 else None,
+            "sparsity": float(1.0 - nonzero / coef_flat.shape[0]) if coef_flat.shape[0] > 0 else None, # If I have 1024 features and 200 coef -->  sparsity = 1 - 200/1024 = 0.805
             "l1_norm": l1_norm,
             "l2_norm": l2_norm,
-            "approx_margin": float(1.0 / l2_norm) if l2_norm > 0 else None,
+            "approx_margin": float(1.0 / l2_norm) if l2_norm > 0 else None, # Principally for svm 
         })
 
         if hasattr(base_model, "intercept_"):
@@ -424,7 +413,7 @@ def _save_model_artifacts(
     if artifacts is None:
         artifacts = {}
 
-    result_dir = _get_result_dir(task, dataset, model_name, fp_type)
+    result_dir = get_results_dir(task, dataset, model_name, fp_type)
 
     if artifacts.get("save_model", False):
         model_path = result_dir / f"model_fold_{fold_idx}.joblib"

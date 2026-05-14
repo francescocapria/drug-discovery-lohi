@@ -1,0 +1,13 @@
+protocol,fingerprint,fold,criterion,max_depth,max_features,min_samples_leaf,min_samples_split,ccp_alpha,class_weight,inner_pr_auc,test_pr_auc
+OOD holdout,ECFP4,1,gini,20.0,sqrt,5.0,20.0,0.001,,0.8552,0.6979
+OOD holdout,ECFP4,2,gini,15.0,log2,5.0,20.0,0.001,,0.6998,0.7698
+OOD holdout,ECFP4,3,gini,7.0,log2,1.0,5.0,0.0001,,0.7375,0.6815
+Random shuffle,ECFP4,1,gini,20.0,sqrt,5.0,2.0,0.0,balanced,0.9115,0.6237
+Random shuffle,ECFP4,2,gini,15.0,sqrt,5.0,20.0,0.0001,,0.8444,0.754
+Random shuffle,ECFP4,3,entropy,20.0,,10.0,2.0,0.0,,0.9097,0.6544
+OOD holdout,MACCS,1,gini,15.0,log2,2.0,5.0,0.0001,,0.8427,0.6262
+OOD holdout,MACCS,2,gini,7.0,sqrt,5.0,2.0,0.0001,balanced,0.741,0.7569
+OOD holdout,MACCS,3,entropy,7.0,sqrt,1.0,5.0,0.01,,0.7214,0.6575
+Random shuffle,MACCS,1,gini,20.0,sqrt,5.0,2.0,0.0,balanced,0.9158,0.5913
+Random shuffle,MACCS,2,gini,20.0,sqrt,2.0,10.0,0.0001,,0.8488,0.7564
+Random shuffle,MACCS,3,gini,15.0,sqrt,2.0,20.0,0.0,balanced,0.8996,0.6741
