@@ -1,5 +1,5 @@
 experiment:
-  name: lr_maccs_sol_hi
+  name: lr_sol_hi_random_shuffle
   task: hi
   dataset: sol
 fingerprint:
@@ -13,6 +13,7 @@ model:
     max_iter: 15000
     random_state: 42
     solver: saga
+    penalty: elasticnet
   search:
     C:
     - 0.005
@@ -39,3 +40,9 @@ cv:
   random_state: 42
   inner_split_strategy: random_shuffle
   holdout_val_fraction: 0.2
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: true
+  save_cv_results: true

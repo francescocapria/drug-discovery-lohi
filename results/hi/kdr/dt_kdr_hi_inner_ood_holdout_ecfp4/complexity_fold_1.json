@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_kdr_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "effective_depth": 20,
+  "n_nodes": 985,
+  "n_leaves": 493,
+  "n_features_used": 358,
+  "used_feature_fraction": 0.349609375,
+  "criterion": "entropy",
+  "max_depth": 20,
+  "max_features": "log2",
+  "min_samples_leaf": 1,
+  "min_samples_split": 5,
+  "ccp_alpha": 0.0,
+  "class_weight": "balanced",
+  "feature_min_depth_mean": 12.273743016759777,
+  "feature_min_depth_std": 4.217273995877667,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 19
+}

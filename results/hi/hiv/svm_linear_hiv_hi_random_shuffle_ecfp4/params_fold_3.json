@@ -1,0 +1,25 @@
+{
+  "fold": 3,
+  "best_params": {
+    "C": 0.1,
+    "class_weight": null
+  },
+  "inner_split_strategy": "random_shuffle",
+  "inner_selection_score": 0.5077920694216477,
+  "inner_train_score": 0.6843212282085356,
+  "train_metrics": {
+    "pr_auc": 0.6764,
+    "roc_auc": 0.9135,
+    "bedroc": 0.8497,
+    "f1_at_05": NaN,
+    "positive_rate": 0.0494
+  },
+  "test_metrics": {
+    "pr_auc": 0.0241,
+    "roc_auc": 0.513,
+    "bedroc": 0.039,
+    "f1_at_05": NaN,
+    "positive_rate": 0.0209
+  },
+  "time_seconds": 218.8
+}

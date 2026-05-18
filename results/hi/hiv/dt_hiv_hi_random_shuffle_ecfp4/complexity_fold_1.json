@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_hiv_hi_random_shuffle_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "effective_depth": 15,
+  "n_nodes": 475,
+  "n_leaves": 238,
+  "n_features_used": 181,
+  "used_feature_fraction": 0.1767578125,
+  "criterion": "gini",
+  "max_depth": 15,
+  "max_features": "sqrt",
+  "min_samples_leaf": 5,
+  "min_samples_split": 20,
+  "ccp_alpha": 0.0,
+  "class_weight": null,
+  "feature_min_depth_mean": 8.30939226519337,
+  "feature_min_depth_std": 3.235399872943177,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 14
+}

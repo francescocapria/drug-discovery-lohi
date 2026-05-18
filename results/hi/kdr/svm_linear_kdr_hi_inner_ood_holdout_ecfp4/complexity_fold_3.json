@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_kdr_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 1024,
+  "sparsity": 0.0,
+  "l1_norm": 145.5258189394077,
+  "l2_norm": 5.748497447009733,
+  "approx_margin": 0.17395850119411332,
+  "intercept": [
+    -1.7823183403971148
+  ],
+  "C": 0.05,
+  "class_weight": "balanced",
+  "n_support_per_class": [
+    960,
+    1698
+  ],
+  "n_support_total": 2658
+}

@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_hiv_hi_inner_ood_holdout_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 52,
+  "sparsity": 0.688622754491018,
+  "l1_norm": 9.4565055197674,
+  "l2_norm": 1.8785837141038193,
+  "approx_margin": 0.5323159103809495,
+  "intercept": [
+    -4.775127086100702
+  ],
+  "C": 0.1,
+  "class_weight": null,
+  "penalty": "elasticnet",
+  "l1_ratio": 1.0,
+  "dual": false
+}

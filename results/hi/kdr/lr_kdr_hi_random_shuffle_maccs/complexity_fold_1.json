@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_kdr_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 47,
+  "sparsity": 0.718562874251497,
+  "l1_norm": 30.954637702456147,
+  "l2_norm": 6.0634288948792925,
+  "approx_margin": 0.16492318411526577,
+  "intercept": [
+    -0.5999749007835138
+  ],
+  "C": 1.0,
+  "class_weight": null,
+  "penalty": "elasticnet",
+  "l1_ratio": 1.0,
+  "dual": false
+}

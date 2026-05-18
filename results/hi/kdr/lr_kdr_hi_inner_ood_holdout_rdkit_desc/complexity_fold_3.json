@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_kdr_hi_inner_ood_holdout_rdkit_desc",
+  "fp_type": "rdkit_desc",
+  "n_features": 217,
+  "coefficient_shape": [
+    1,
+    217
+  ],
+  "n_coefficients": 217,
+  "n_nonzero_coefficients": 205,
+  "sparsity": 0.055299539170506895,
+  "l1_norm": 54.2713899435813,
+  "l2_norm": 5.316086726714038,
+  "approx_margin": 0.18810829307484167,
+  "intercept": [
+    0.9194072455044757
+  ],
+  "C": 0.5,
+  "class_weight": null,
+  "penalty": "elasticnet",
+  "l1_ratio": 0.0,
+  "dual": false
+}

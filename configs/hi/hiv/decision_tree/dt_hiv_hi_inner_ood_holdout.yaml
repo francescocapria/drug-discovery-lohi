@@ -1,5 +1,5 @@
 experiment:
-  name: dt_ecfp4_hiv_hi
+  name: dt_hiv_hi_inner_ood_holdout
   task: hi
   dataset: hiv
 fingerprint:
@@ -46,3 +46,9 @@ cv:
   random_state: 42
   inner_split_strategy: holdout
   holdout_val_fraction: 0.2
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: true
+  save_cv_results: true

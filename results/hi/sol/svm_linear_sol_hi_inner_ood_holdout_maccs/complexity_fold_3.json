@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_sol_hi_inner_ood_holdout_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 144,
+  "sparsity": 0.13772455089820357,
+  "l1_norm": 16.383718299061837,
+  "l2_norm": 1.7980841746855578,
+  "approx_margin": 0.5561474896885048,
+  "intercept": [
+    -1.7612818939174575
+  ],
+  "C": 0.05,
+  "class_weight": null,
+  "n_support_per_class": [
+    351,
+    317
+  ],
+  "n_support_total": 668
+}

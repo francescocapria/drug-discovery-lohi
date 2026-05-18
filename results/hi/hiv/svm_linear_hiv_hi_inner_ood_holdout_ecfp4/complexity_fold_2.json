@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_hiv_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 1024,
+  "sparsity": 0.0,
+  "l1_norm": 181.33977772858793,
+  "l2_norm": 7.155548703753665,
+  "approx_margin": 0.1397516866142521,
+  "intercept": [
+    -2.2095716490850363
+  ],
+  "C": 0.5,
+  "class_weight": null,
+  "n_support_per_class": [
+    1006,
+    455
+  ],
+  "n_support_total": 1461
+}

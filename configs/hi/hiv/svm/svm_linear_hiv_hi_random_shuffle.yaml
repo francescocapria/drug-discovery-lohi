@@ -1,5 +1,5 @@
 experiment:
-  name: svm_linear_hiv_hi
+  name: svm_linear_hiv_hi_random_shuffle
   task: hi
   dataset: hiv
 fingerprint:
@@ -12,16 +12,8 @@ model:
     kernel: linear
     probability: false
   search:
-  C:
-  - 0.01
-  - 0.1
-  - 0.5
-  - 1.0
-  - 5.0
-  - 10.0
-  class_weight:
-  - null
-  - balanced
+    C: [0.01, 0.1, 0.5, 1.0, 5.0, 10.0]
+    class_weight: [null, balanced]
 cv:
   inner_k: 2
   scoring: average_precision
@@ -29,3 +21,9 @@ cv:
   random_state: 42
   inner_split_strategy: random_shuffle
   holdout_val_fraction: 0.2
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: true
+  save_cv_results: true

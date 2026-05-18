@@ -1,5 +1,5 @@
 experiment:
-  name: dt_ecfp4_sol_hi
+  name: dt_sol_hi_random_shuffle
   task: hi
   dataset: sol
 fingerprint:
@@ -50,3 +50,9 @@ cv:
   random_state: 42
   inner_split_strategy: random_shuffle
   holdout_val_fraction: 0.2
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: true
+  save_cv_results: true

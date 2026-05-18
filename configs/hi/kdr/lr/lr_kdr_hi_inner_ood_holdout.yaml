@@ -1,5 +1,5 @@
 experiment:
-  name: lr_maccs_kdr_hi
+  name: lr_kdr_hi_inner_ood_holdout
   task: hi
   dataset: kdr
 fingerprint:
@@ -41,4 +41,8 @@ cv:
   inner_split_strategy: holdout
   holdout_val_fraction: 0.2
   
-  
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: true
+  save_cv_results: true

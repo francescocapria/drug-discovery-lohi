@@ -129,15 +129,15 @@ def _tree_minimum_depths(tree_model: BaseEstimator, n_features: int) -> Dict[int
     min_depth = {}
 
     stack = [(0, 0)]  # (node_id, depth)
-    while stack:
+    while stack: # for every node in the tree
         node_id, depth = stack.pop()
         feat_idx = int(feature[node_id])
 
-        if feat_idx >= 0:
+        if feat_idx >= 0: # it's not a leaf, but a split
             if feat_idx not in min_depth:
                 min_depth[feat_idx] = depth
             else:
-                min_depth[feat_idx] = min(min_depth[feat_idx], depth)
+                min_depth[feat_idx] = min(min_depth[feat_idx], depth) # I keep only the min distance from the root
 
             left = children_left[node_id]
             right = children_right[node_id]
@@ -197,7 +197,7 @@ def _extract_complexity_metrics(
         coef = np.asarray(base_model.coef_)
 
         if coef.ndim > 1:
-            coef_flat = coef.ravel()
+            coef_flat = coef.ravel() # If coef_ is multidimensional, flatten it, we want (n_features,) not (1, n_features))
         else:
             coef_flat = coef
 
@@ -253,7 +253,7 @@ def _extract_complexity_metrics(
     # -----------------------------------------------------------------------
     if hasattr(base_model, "tree_"):
         tree = base_model.tree_
-        used_features = tree.feature[tree.feature >= 0]
+        used_features = tree.feature[tree.feature >= 0] # only split nodes
         unique_used_features = np.unique(used_features)
 
         complexity.update({
