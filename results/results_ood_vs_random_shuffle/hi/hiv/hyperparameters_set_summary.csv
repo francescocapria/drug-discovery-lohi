@@ -1,0 +1,7 @@
+model,protocol,ccp_alpha,class_weight,criterion,max_depth,max_features,min_samples_leaf,min_samples_split,C,l1_ratio
+Decision Tree,OOD holdout,"{0.0, 0.0001}",{balanced},"{entropy, gini}","{3.0, 15.0, 8.0, 10.0}","{log2, sqrt}","{5.0, 20.0, 10.0}","{10.0, 20.0, 50.0}",,
+Decision Tree,Random shuffle,"{0.0, 0.0001}",{balanced},"{gini, entropy}",{15.0},{sqrt},"{5.0, 10.0}","{20.0, 10.0}",,
+Logistic Regression,OOD holdout,,{balanced},,,,,,"{0.1, 10.0, 0.01}","{1.0, 0.0}"
+Logistic Regression,Random shuffle,,,,,,,,"{0.1, 5.0, 1.0}","{0.0, 0.5, 1.0}"
+Linear SVM,OOD holdout,,{balanced},,,,,,"{0.1, 0.5, 0.01}",
+Linear SVM,Random shuffle,,{balanced},,,,,,"{0.01, 0.1, 5.0, 0.5}",

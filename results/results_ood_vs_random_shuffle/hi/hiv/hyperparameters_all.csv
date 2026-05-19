@@ -1,0 +1,43 @@
+model,fingerprint,protocol,fold,inner_pr_auc,test_pr_auc,ccp_alpha,class_weight,criterion,max_depth,max_features,min_samples_leaf,min_samples_split,C,l1_ratio,model_order,fingerprint_order,protocol_order
+Decision Tree,ECFP4,OOD holdout,1,0.1125,0.0395,0.0,,entropy,3.0,log2,5.0,10.0,,,0,0,0
+Decision Tree,ECFP4,OOD holdout,2,0.0874,0.0748,0.0,,gini,15.0,log2,5.0,20.0,,,0,0,0
+Decision Tree,ECFP4,OOD holdout,3,0.083,0.0257,0.0001,balanced,entropy,15.0,sqrt,5.0,10.0,,,0,0,0
+Decision Tree,ECFP4,Random shuffle,1,0.3496,0.0893,0.0,,gini,15.0,sqrt,5.0,20.0,,,0,0,1
+Decision Tree,ECFP4,Random shuffle,2,0.3592,0.0616,0.0,balanced,gini,15.0,sqrt,5.0,20.0,,,0,0,1
+Decision Tree,ECFP4,Random shuffle,3,0.3936,0.0279,0.0,balanced,gini,15.0,sqrt,5.0,10.0,,,0,0,1
+Decision Tree,MACCS,OOD holdout,1,0.1218,0.147,0.0001,,entropy,8.0,log2,5.0,50.0,,,0,1,0
+Decision Tree,MACCS,OOD holdout,2,0.2083,0.0613,0.0,,entropy,15.0,sqrt,20.0,10.0,,,0,1,0
+Decision Tree,MACCS,OOD holdout,3,0.2082,0.025,0.0,balanced,gini,10.0,sqrt,10.0,50.0,,,0,1,0
+Decision Tree,MACCS,Random shuffle,1,0.3328,0.0584,0.0,,gini,15.0,sqrt,5.0,20.0,,,0,1,1
+Decision Tree,MACCS,Random shuffle,2,0.4213,0.0655,0.0,balanced,gini,15.0,sqrt,10.0,10.0,,,0,1,1
+Decision Tree,MACCS,Random shuffle,3,0.4136,0.037,0.0001,balanced,entropy,15.0,sqrt,5.0,20.0,,,0,1,1
+Logistic Regression,ECFP4,OOD holdout,1,0.1025,0.0676,,,,,,,,0.1,1.0,1,0,0
+Logistic Regression,ECFP4,OOD holdout,2,0.1176,0.0752,,balanced,,,,,,0.1,0.0,1,0,0
+Logistic Regression,ECFP4,OOD holdout,3,0.1653,0.0302,,balanced,,,,,,0.1,1.0,1,0,0
+Logistic Regression,ECFP4,Random shuffle,1,0.4508,0.0906,,,,,,,,0.1,0.0,1,0,1
+Logistic Regression,ECFP4,Random shuffle,2,0.4482,0.0954,,,,,,,,0.1,0.0,1,0,1
+Logistic Regression,ECFP4,Random shuffle,3,0.5269,0.0281,,,,,,,,0.1,0.0,1,0,1
+Logistic Regression,MACCS,OOD holdout,1,0.1217,0.1984,,balanced,,,,,,10.0,1.0,1,1,0
+Logistic Regression,MACCS,OOD holdout,2,0.1585,0.0929,,,,,,,,0.1,1.0,1,1,0
+Logistic Regression,MACCS,OOD holdout,3,0.2457,0.0473,,balanced,,,,,,0.1,1.0,1,1,0
+Logistic Regression,MACCS,Random shuffle,1,0.3048,0.1634,,,,,,,,5.0,0.5,1,1,1
+Logistic Regression,MACCS,Random shuffle,2,0.3337,0.0915,,,,,,,,0.1,0.0,1,1,1
+Logistic Regression,MACCS,Random shuffle,3,0.3886,0.0455,,,,,,,,1.0,0.0,1,1,1
+Logistic Regression,RDKit desc,OOD holdout,1,0.1475,0.0889,,,,,,,,0.01,0.0,1,2,0
+Logistic Regression,RDKit desc,OOD holdout,2,0.227,0.1356,,,,,,,,0.1,0.0,1,2,0
+Logistic Regression,RDKit desc,OOD holdout,3,0.1417,0.041,,,,,,,,10.0,0.0,1,2,0
+Logistic Regression,RDKit desc,Random shuffle,1,0.3018,0.1002,,,,,,,,0.1,0.5,1,2,1
+Logistic Regression,RDKit desc,Random shuffle,2,0.4221,0.1272,,,,,,,,0.1,1.0,1,2,1
+Logistic Regression,RDKit desc,Random shuffle,3,0.4097,0.0388,,,,,,,,0.1,0.0,1,2,1
+Linear SVM,ECFP4,OOD holdout,1,0.0779,0.0616,,,,,,,,0.1,,2,0,0
+Linear SVM,ECFP4,OOD holdout,2,0.1111,0.0675,,,,,,,,0.5,,2,0,0
+Linear SVM,ECFP4,OOD holdout,3,0.1057,0.0306,,balanced,,,,,,0.01,,2,0,0
+Linear SVM,ECFP4,Random shuffle,1,0.397,0.1223,,balanced,,,,,,0.01,,2,0,1
+Linear SVM,ECFP4,Random shuffle,2,0.3951,0.0721,,,,,,,,0.1,,2,0,1
+Linear SVM,ECFP4,Random shuffle,3,0.5078,0.0241,,,,,,,,0.1,,2,0,1
+Linear SVM,MACCS,OOD holdout,1,0.0999,0.1456,,balanced,,,,,,0.1,,2,1,0
+Linear SVM,MACCS,OOD holdout,2,0.2141,0.121,,,,,,,,0.1,,2,1,0
+Linear SVM,MACCS,OOD holdout,3,0.1748,0.0437,,balanced,,,,,,0.01,,2,1,0
+Linear SVM,MACCS,Random shuffle,1,0.216,0.1738,,,,,,,,0.01,,2,1,1
+Linear SVM,MACCS,Random shuffle,2,0.2956,0.1073,,,,,,,,5.0,,2,1,1
+Linear SVM,MACCS,Random shuffle,3,0.3331,0.0372,,,,,,,,0.5,,2,1,1
