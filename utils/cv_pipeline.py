@@ -44,9 +44,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Artifact utilities
-# ---------------------------------------------------------------------------
 
 
 def _json_safe(value: Any) -> Any:
@@ -85,9 +83,7 @@ def _extract_model_from_pipeline(model: BaseEstimator) -> BaseEstimator:
     """
     If the fitted estimator is a sklearn Pipeline, return the final model step.
     Otherwise return the model itself.
-
-    This is useful for RDKit descriptors, where the estimator may be:
-        Pipeline([("scaler", StandardScaler()), ("model", LogisticRegression(...))])
+    This is useful for RDKit descriptors
     """
     if isinstance(model, Pipeline):
         return model.steps[-1][1]
@@ -98,9 +94,8 @@ def _get_feature_names(fp_type: str, n_features: int) -> List[str]:
     """
     Generate generic feature names for fingerprints/descriptors.
 
-    For ECFP4/MACCS this gives bit indices.
-    For RDKit descriptors this gives descriptor indices unless a descriptor-name
-    mapping is added elsewhere.
+    For ECFP4/MACCS this gives bit indices
+    For RDKit descriptors this gives descriptor indices
     """
     if fp_type in ["ecfp4", "maccs", "rdkit_topo"]:
         return [f"{fp_type}_bit_{i}" for i in range(n_features)]
@@ -115,8 +110,6 @@ def _tree_minimum_depths(tree_model: BaseEstimator, n_features: int) -> Dict[int
     """
     Compute the minimum depth at which each feature appears in a fitted Decision Tree.
 
-    A lower minimum depth means the feature is used closer to the root and is
-    therefore more globally influential in the tree structure.
     """
     if not hasattr(tree_model, "tree_"):
         return {}
@@ -190,9 +183,8 @@ def _extract_complexity_metrics(
         "n_features": int(n_features),
     }
 
-    # -----------------------------------------------------------------------
     # Linear models: Logistic Regression, Linear SVM, LinearRegression, etc.
-    # -----------------------------------------------------------------------
+    # 
     if hasattr(base_model, "coef_"):
         coef = np.asarray(base_model.coef_)
 
@@ -238,9 +230,7 @@ def _extract_complexity_metrics(
         if hasattr(base_model, "loss"):
             complexity["loss"] = base_model.loss
 
-    # -----------------------------------------------------------------------
     # SVM support-vector information, if available
-    # -----------------------------------------------------------------------
     if hasattr(base_model, "n_support_"):
         complexity["n_support_per_class"] = np.asarray(base_model.n_support_).tolist()
         complexity["n_support_total"] = int(np.sum(base_model.n_support_))
@@ -248,9 +238,7 @@ def _extract_complexity_metrics(
     if hasattr(base_model, "support_"):
         complexity["n_support_total"] = int(len(base_model.support_))
 
-    # -----------------------------------------------------------------------
     # Decision Tree metrics
-    # -----------------------------------------------------------------------
     if hasattr(base_model, "tree_"):
         tree = base_model.tree_
         used_features = tree.feature[tree.feature >= 0] # only split nodes
@@ -309,9 +297,7 @@ def _extract_feature_importance(
     base_model = _extract_model_from_pipeline(fitted_model)
     feature_names = _get_feature_names(fp_type, n_features)
 
-    # -----------------------------------------------------------------------
     # Linear model coefficients
-    # -----------------------------------------------------------------------
     if hasattr(base_model, "coef_"):
         coef = np.asarray(base_model.coef_)
 
@@ -351,9 +337,7 @@ def _extract_feature_importance(
 
         return df
 
-    # -----------------------------------------------------------------------
     # Decision Tree impurity-based feature importance + minimum depth
-    # -----------------------------------------------------------------------
     if hasattr(base_model, "feature_importances_"):
         importance = np.asarray(base_model.feature_importances_)
         min_depths = _tree_minimum_depths(base_model, n_features)
@@ -438,9 +422,7 @@ def _save_model_artifacts(
         logger.info(f"Saved CV/search results to {cv_results_path}")
 
 
-# ---------------------------------------------------------------------------
 # Inner CV: hyperparameter search on a single outer fold
-# ---------------------------------------------------------------------------
 
 def _inner_cv_sklearn(
     X_train: np.ndarray,
@@ -500,9 +482,7 @@ def _inner_cv_sklearn(
     return search.best_estimator_, search.best_params_, search.best_score_, best_train_score, search
 
 
-# ---------------------------------------------------------------------------
 # Inner holdout
-# ---------------------------------------------------------------------------
 
 def _inner_holdout_sklearn(
     X_train: np.ndarray,
@@ -594,8 +574,6 @@ def _infer_fold_origin_labels(
     """
     Infer, for each molecule in the outer training set, whether it belongs to
     the OOD inner-train subset, the OOD inner-validation subset, both, or neither.
-
-    This is used only to stratify the random-shuffle split by fold origin.
     """
     inner_train_smiles = set(inner_train_df["smiles"].astype(str))
     inner_val_smiles = set(inner_val_df["smiles"].astype(str))
@@ -653,9 +631,7 @@ def _make_joint_stratify_labels(
     return labels
 
 
-# ---------------------------------------------------------------------------
 # Single outer fold execution
-# ---------------------------------------------------------------------------
 
 def run_single_fold(
     train_df: pd.DataFrame,
@@ -677,14 +653,6 @@ def run_single_fold(
 ) -> Dict[str, Any]:
     """
     Execute one outer fold: featurize → inner model selection → evaluate → save.
-
-    Returns: dict with:
-        best_params,
-        inner_selection_score,
-        inner_train_score,
-        test_metrics,
-        train_metrics,
-        time_seconds
     """
     logger.info(f"\n{'='*60}")
     logger.info(f"FOLD {fold_idx} | {model_name} + {fp_type} | {task}/{dataset}")
@@ -742,13 +710,9 @@ def run_single_fold(
         # Random shuffle:
         # mix the same outer-training molecules, but keep the same validation
         # proportion as the corresponding OOD holdout split.
-        #
-        # In addition, for Hi tasks we stratify as much as possible by:
-        #   1. target label;
-        #   2. original fold/subset origin.
-        #
-        # If joint stratification is impossible because some strata are too small,
-        # we fall back to target-only stratification, then to no stratification.
+       
+        # If joint stratification is impossible because some strati are too small,
+        # we go back to target-only stratification, then to no stratification.
 
         val_frac = kwargs.get("random_val_fraction", None)
 
@@ -907,9 +871,7 @@ def run_single_fold(
     }
 
 
-# ---------------------------------------------------------------------------
 # Full nested CV (all 3 outer folds)
-# ---------------------------------------------------------------------------
 
 def run_nested_cv(
     task: str,
@@ -968,7 +930,7 @@ def run_nested_cv(
     for fold_idx in folds:
         train_df, test_df = load_fold(task, dataset, fold_idx)
 
-        # Per-fold copy of kwargs; we inject inner-split material here.
+        # Per-fold copy of kwargs, inner-split material here.
         extra_kwargs = dict(kwargs)
 
         if inner_split_strategy in ["holdout", "random_shuffle"]:
@@ -1009,8 +971,8 @@ def run_nested_cv(
 
             elif inner_split_strategy == "random_shuffle":
                 # Random shuffle, but matched to the OOD holdout:
-                #   1. same validation fraction as the OOD inner split;
-                #   2. stratify by target AND original fold origin.
+                # same validation fraction as the OOD inner split;
+                #   stratify by target AND original fold origin.
                 n_ood_train = len(inner_train_df)
                 n_ood_val = len(inner_val_df)
                 random_val_fraction = n_ood_val / (n_ood_train + n_ood_val)
