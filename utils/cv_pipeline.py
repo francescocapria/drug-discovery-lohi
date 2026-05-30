@@ -583,6 +583,76 @@ def _inner_holdout_sklearn(
     return search.best_estimator_, search.best_params_, search.best_score_, best_train_score, search
 
 
+
+# Random shuffle helpers: same train/validation proportion as OOD holdout
+
+def _infer_fold_origin_labels(
+    train_df: pd.DataFrame,
+    inner_train_df: pd.DataFrame,
+    inner_val_df: pd.DataFrame,
+) -> np.ndarray:
+    """
+    Infer, for each molecule in the outer training set, whether it belongs to
+    the OOD inner-train subset, the OOD inner-validation subset, both, or neither.
+
+    This is used only to stratify the random-shuffle split by fold origin.
+    """
+    inner_train_smiles = set(inner_train_df["smiles"].astype(str))
+    inner_val_smiles = set(inner_val_df["smiles"].astype(str))
+
+    origins = []
+
+    for smi in train_df["smiles"].astype(str):
+        in_train_subset = smi in inner_train_smiles
+        in_val_subset = smi in inner_val_smiles
+
+        if in_train_subset and in_val_subset:
+            origins.append("shared")
+        elif in_train_subset:
+            origins.append("inner_train_origin")
+        elif in_val_subset:
+            origins.append("inner_val_origin")
+        else:
+            origins.append("unknown")
+
+    return np.asarray(origins)
+
+
+def _make_joint_stratify_labels(
+    y: np.ndarray,
+    fold_origin: Optional[np.ndarray] = None,
+) -> Optional[np.ndarray]:
+    """
+    Build joint stratification labels.
+
+    For Hi:
+        target + fold origin
+
+    Example:
+        y=1 | origin=inner_train_origin
+        y=0 | origin=inner_val_origin
+
+    This allows random_shuffle to preserve both:
+        - class balance;
+        - original fold/subset composition.
+    """
+    if fold_origin is None:
+        return None
+
+    y = np.asarray(y)
+    fold_origin = np.asarray(fold_origin)
+
+    if len(y) != len(fold_origin):
+        return None
+
+    labels = np.asarray([
+        f"y={target}|origin={origin}"
+        for target, origin in zip(y, fold_origin)
+    ])
+
+    return labels
+
+
 # ---------------------------------------------------------------------------
 # Single outer fold execution
 # ---------------------------------------------------------------------------
@@ -669,18 +739,72 @@ def run_single_fold(
         )
 
     elif inner_split_strategy == "random_shuffle":
-        # Random shuffle: mix train, split randomly
-        val_frac = kwargs.get("holdout_val_fraction", 0.2)
+        # Random shuffle:
+        # mix the same outer-training molecules, but keep the same validation
+        # proportion as the corresponding OOD holdout split.
+        #
+        # In addition, for Hi tasks we stratify as much as possible by:
+        #   1. target label;
+        #   2. original fold/subset origin.
+        #
+        # If joint stratification is impossible because some strata are too small,
+        # we fall back to target-only stratification, then to no stratification.
+
+        val_frac = kwargs.get("random_val_fraction", None)
+
+        if val_frac is None:
+            # Backward-compatible fallback for old configs.
+            val_frac = kwargs.get("holdout_val_fraction", 0.2)
+
+        random_stratify_labels = kwargs.get("random_stratify_labels", None)
+
+        logger.info(
+            f"  Random shuffle holdout: validation fraction = {val_frac:.4f}"
+        )
+
+        stratify_candidates = []
 
         if task == "hi":
-            X_tr, X_vl, y_tr, y_vl = train_test_split(
-                X_train, y_train, test_size=val_frac,
-                random_state=random_state, stratify=y_train,
-            )
-        else:
-            X_tr, X_vl, y_tr, y_vl = train_test_split(
-                X_train, y_train, test_size=val_frac,
-                random_state=random_state,
+            if random_stratify_labels is not None:
+                stratify_candidates.append(random_stratify_labels)
+
+        # fallback: stratify by target only
+            stratify_candidates.append(y_train)
+
+    # final fallback: no stratification
+        stratify_candidates.append(None)
+
+        split_done = False
+        last_error = None
+
+        for stratify_labels in stratify_candidates:
+            try:
+                X_tr, X_vl, y_tr, y_vl = train_test_split(
+                    X_train,
+                    y_train,
+                    test_size=val_frac,
+                    random_state=random_state,
+                    stratify=stratify_labels,
+                )
+                split_done = True
+
+                if stratify_labels is random_stratify_labels:
+                    logger.info("  Random shuffle stratification: target + fold origin")
+                elif stratify_labels is y_train:
+                    logger.info("  Random shuffle stratification: target only")
+                else:
+                    logger.info("  Random shuffle stratification: none")
+
+                break
+
+            except ValueError as e:
+                last_error = e
+                continue
+
+        if not split_done:
+            raise ValueError(
+                "Could not create random shuffle holdout split. "
+                f"Last error: {last_error}"
             )
 
         best_model, best_params, inner_score, inner_train_score, search_object = _inner_holdout_sklearn(
@@ -824,82 +948,125 @@ def run_nested_cv(
             "or implement a dedicated cluster-aware holdout."
         )
 
+    # Inner subset reconstruction map (only used for holdout / random_shuffle):
+    #   test_1.csv = F3, test_2.csv = F2, test_3.csv = F1
+    #
+    #   outer fold 1: train = F1 u F2, test = F3
+    #       inner train = F1 = test_3 ; inner val = F2 = test_2
+    #   outer fold 2: train = F1 u F3, test = F2
+    #       inner train = F1 = test_3 ; inner val = F3 = test_1
+    #   outer fold 3: train = F2 u F3, test = F1
+    #       inner train = F2 = test_2 ; inner val = F3 = test_1
+    inner_fold_map = {
+        1: (3, 2),
+        2: (3, 1),
+        3: (2, 1),
+    }
+
     fold_results = []
 
     for fold_idx in folds:
         train_df, test_df = load_fold(task, dataset, fold_idx)
 
-        inner_split_strategy = kwargs.get("inner_split_strategy", "kfold")
+        # Per-fold copy of kwargs; we inject inner-split material here.
         extra_kwargs = dict(kwargs)
 
-        if inner_split_strategy == "holdout":
-            # Reconstruct F1, F2, F3 from the test sets of the 3 outer folds:
-            #   test_1.csv = F3, test_2.csv = F2, test_3.csv = F1
-            # For each outer fold, train = union of 2 subsets, test = remaining subset.
-            # We use one subset as inner train and the other as inner validation,
-            # so inner val is chemically OOD
-            #
-            # outer fold 1: train = F1∪F2, test = F3 → inner train = F1 (test_3), inner val = F2 (test_2)
-            # outer fold 2: train = F1∪F3, test = F2 → inner train = F1 (test_3), inner val = F3 (test_1)
-            # outer fold 3: train = F2∪F3, test = F1 → inner train = F2 (test_2), inner val = F3 (test_1)
-            inner_fold_map = {
-                1: (3, 2),   # (fold_idx whose test_i is inner train, fold_idx whose test_i is inner val)
-                2: (3, 1),
-                3: (2, 1),
-            }
+        if inner_split_strategy in ["holdout", "random_shuffle"]:
             train_inner_idx, val_inner_idx = inner_fold_map[fold_idx]
 
-            # load_fold returns (train_df, test_df); we take the TEST portion as F_i
+            # load_fold returns (train_df, test_df); the TEST portion is F_i
             _, inner_train_df = load_fold(task, dataset, train_inner_idx)
-            _, inner_val_df   = load_fold(task, dataset, val_inner_idx)
+            _, inner_val_df = load_fold(task, dataset, val_inner_idx)
 
-            inner_train_cache = get_feature_cache_path(task, dataset, fp_type, "test", train_inner_idx)
-            inner_val_cache   = get_feature_cache_path(task, dataset, fp_type, "test", val_inner_idx)
+            if inner_split_strategy == "holdout":
+                # OOD holdout: use the two chemically distinct subsets directly
+                inner_train_cache = get_feature_cache_path(
+                    task, dataset, fp_type, "test", train_inner_idx
+                )
+                inner_val_cache = get_feature_cache_path(
+                    task, dataset, fp_type, "test", val_inner_idx
+                )
 
-            X_inner_train = compute_fingerprints(
-                inner_train_df["smiles"].tolist(), fp_type, inner_train_cache
-            )
-            X_inner_val = compute_fingerprints(
-                inner_val_df["smiles"].tolist(), fp_type, inner_val_cache
-            )
-            y_inner_train = inner_train_df["value"].values
-            y_inner_val   = inner_val_df["value"].values
+                X_inner_train = compute_fingerprints(
+                    inner_train_df["smiles"].tolist(), fp_type, inner_train_cache
+                )
+                X_inner_val = compute_fingerprints(
+                    inner_val_df["smiles"].tolist(), fp_type, inner_val_cache
+                )
 
-            # Cast to bool for KNN/Jaccard distance (same logic as run_single_fold)
-            if model_name.startswith("knn") and fp_type in ["ecfp4", "maccs", "rdkit_topo"]:
-                X_inner_train = X_inner_train.astype(bool)
-                X_inner_val = X_inner_val.astype(bool)
+                y_inner_train = inner_train_df["value"].values
+                y_inner_val = inner_val_df["value"].values
 
-            extra_kwargs["inner_train_X"] = X_inner_train
-            extra_kwargs["inner_train_y"] = y_inner_train
-            extra_kwargs["inner_val_X"]   = X_inner_val
-            extra_kwargs["inner_val_y"]   = y_inner_val
+                # Cast to bool for KNN/Jaccard distance.
+                if model_name.startswith("knn") and fp_type in ["ecfp4", "maccs", "rdkit_topo"]:
+                    X_inner_train = X_inner_train.astype(bool)
+                    X_inner_val = X_inner_val.astype(bool)
 
+                extra_kwargs["inner_train_X"] = X_inner_train
+                extra_kwargs["inner_train_y"] = y_inner_train
+                extra_kwargs["inner_val_X"] = X_inner_val
+                extra_kwargs["inner_val_y"] = y_inner_val
+
+            elif inner_split_strategy == "random_shuffle":
+                # Random shuffle, but matched to the OOD holdout:
+                #   1. same validation fraction as the OOD inner split;
+                #   2. stratify by target AND original fold origin.
+                n_ood_train = len(inner_train_df)
+                n_ood_val = len(inner_val_df)
+                random_val_fraction = n_ood_val / (n_ood_train + n_ood_val)
+
+                fold_origin = _infer_fold_origin_labels(
+                    train_df=train_df,
+                    inner_train_df=inner_train_df,
+                    inner_val_df=inner_val_df,
+                )
+
+                random_stratify_labels = _make_joint_stratify_labels(
+                    y=train_df["value"].values,
+                    fold_origin=fold_origin,
+                )
+
+                extra_kwargs["random_val_fraction"] = random_val_fraction
+                extra_kwargs["random_stratify_labels"] = random_stratify_labels
+
+                logger.info(
+                    f"  Random shuffle matched to OOD split: "
+                    f"n_ood_train={n_ood_train}, n_ood_val={n_ood_val}, "
+                    f"val_fraction={random_val_fraction:.4f}"
+                )
+
+        # ---- Execute this outer fold ----
         result = run_single_fold(
-            train_df, test_df, fold_idx,
-            task=task, dataset=dataset,
-            fp_type=fp_type, model_name=model_name,
+            train_df=train_df,
+            test_df=test_df,
+            fold_idx=fold_idx,
+            task=task,
+            dataset=dataset,
+            fp_type=fp_type,
+            model_name=model_name,
             estimator_factory=estimator_factory,
             param_grid=param_grid,
-            inner_k=inner_k, scoring=scoring,
-            search_strategy=search_strategy, n_iter=n_iter,
+            inner_k=inner_k,
+            scoring=scoring,
+            search_strategy=search_strategy,
+            n_iter=n_iter,
             random_state=random_state,
             save_results=save_results,
             **extra_kwargs,
         )
         fold_results.append(result)
 
-    # Aggregate test metrics across folds
+    # ---- Aggregate test metrics across folds ----
     test_metrics_list = [r["test_metrics"] for r in fold_results]
     aggregated = aggregate_fold_metrics(test_metrics_list)
 
     logger.info(f"\n{'='*60}")
-    logger.info(f"AGGREGATED TEST METRICS:")
+    logger.info("AGGREGATED TEST METRICS:")
     for k, v in aggregated.items():
         logger.info(f"  {k}: {v}")
     logger.info(f"{'='*60}")
 
-    # Check hyperparameter stability
+    # ---- Check hyperparameter stability across folds ----
     all_params = [r["best_params"] for r in fold_results]
     if len(set(str(p) for p in all_params)) > 1:
         logger.info("NOTE: Best hyperparameters differ across folds (expected in proper nested CV)")

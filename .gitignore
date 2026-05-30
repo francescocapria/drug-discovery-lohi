@@ -69,6 +69,7 @@ MANIFEST
 data/raw/
 data/processed/
 data/interim/
+results/
 
 # =========================
 # Results / outputs
@@ -99,3 +100,4 @@ runs/
 coverage/
 htmlcov/
 .cache/
+.aider*
