@@ -1,16 +1,24 @@
 """
 Nested cross-validation pipeline for the Lo-Hi benchmark.
 
-Implements the proper methodology:
-- Outer loop: 3 pre-defined folds (from Steshin's splitting)
-- Inner model selection strategy:
-  1. kfold: k-fold CV on train_i for hyperparameter selection
-     (StratifiedKFold for Hi, KFold for Lo)
-  2. holdout: OOD-aware fixed inner holdout for Hi only
-  3. random_shuffle: random fixed inner holdout
-- Refit selected model on the available inner-selection data via GridSearchCV/RandomizedSearchCV
-- Single evaluation on test_i
+The pipeline uses the 3 predefined Lo-Hi outer folds. For each fold, models are
+selected only on train_i and evaluated once on the held-out test_i.
 
+Supported inner-selection strategies:
+- kfold: standard inner CV on train_i;
+- holdout: Hi-only OOD holdout, reconstructed from the Lo-Hi fold subsets;
+- random_shuffle: random inner holdout matched to the same train/validation
+  proportion as the corresponding OOD holdout.
+
+Feature importance:
+- Decision Trees use permutation importance as the main feature ranking, computed
+  post-hoc on a held-out evaluation set, usually the outer test fold. The native
+  sklearn impurity importance is still saved only as a diagnostic.
+- Logistic Regression and Linear SVM keep the standard coefficient-based ranking
+  using absolute weights. No permutation importance is computed for them.
+
+Optional artifacts include fitted models, parameters, predictions, complexity
+metrics, feature-importance tables and CV/search results.
 """
 
 import time
@@ -29,6 +37,7 @@ from sklearn.model_selection import (
 )
 from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
+from sklearn.inspection import permutation_importance
 from utils.fingerprints import compute_fingerprints
 from utils.metrics import get_hi_metrics, get_lo_metrics, aggregate_fold_metrics
 from utils.io_utils import (
@@ -42,6 +51,11 @@ from utils.io_utils import (
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# Default permutation-importance settings (can be overridden via kwargs)
+DEFAULT_PERM_N_REPEATS = 10
+DEFAULT_PERM_N_JOBS = -1
 
 
 # Artifact utilities
@@ -280,24 +294,34 @@ def _extract_feature_importance(
     model_name: str,
     fp_type: str,
     n_features: int,
+    X_eval: Optional[np.ndarray] = None,
+    y_eval: Optional[np.ndarray] = None,
+    task: str = "hi",
+    perm_n_repeats: int = DEFAULT_PERM_N_REPEATS,
+    perm_scoring: Optional[str] = None,
+    perm_n_jobs: int = DEFAULT_PERM_N_JOBS,
+    random_state: int = 42,
+    eval_set_name: str = "test",
 ) -> Optional[pd.DataFrame]:
     """
-    Extract feature importance / coefficient information.
+    Extract feature-importance information for fitted models.
 
-    For linear models:
-        importance is based on coefficients:
-            raw_weight = w_j
-            abs_weight = |w_j|
-            normalized_abs_importance = |w_j| / sum_k |w_k|
+    For linear models such as Logistic Regression and Linear SVM, features are ranked
+    by the absolute value of their learned coefficients. The signed coefficient,
+    absolute weight, normalized weight, direction and rank are saved.
 
-    For Decision Tree:
-        importance is based on sklearn feature_importances_.
-        minimum depth is also added when available.
+    For Decision Trees, features are ranked by permutation importance computed on a
+    held-out evaluation set, usually the outer test fold. The native sklearn
+    impurity importance is also saved as a diagnostic, together with minimum depth
+    and whether each feature is used in the tree.
+
+    If permutation importance cannot be computed for a tree, the function falls back
+    to impurity-based ordering.
     """
     base_model = _extract_model_from_pipeline(fitted_model)
     feature_names = _get_feature_names(fp_type, n_features)
 
-    # Linear model coefficients
+    # Linear model coefficients  
     if hasattr(base_model, "coef_"):
         coef = np.asarray(base_model.coef_)
 
@@ -337,7 +361,8 @@ def _extract_feature_importance(
 
         return df
 
-    # Decision Tree impurity-based feature importance + minimum depth
+    # Decision Tree  ->  permutation importance is the PRIMARY ranking
+    # impurity-based importance is kept as a diagnostic column
     if hasattr(base_model, "feature_importances_"):
         importance = np.asarray(base_model.feature_importances_)
         min_depths = _tree_minimum_depths(base_model, n_features)
@@ -360,13 +385,64 @@ def _extract_feature_importance(
         else:
             df["normalized_tree_importance"] = 0.0
 
-        df = df.sort_values(
-            ["tree_importance", "minimum_depth"],
-            ascending=[False, True],
-            na_position="last",
-        ).reset_index(drop=True)
+        # Diagnostic impurity-based rank (kept for backward compatibility)
+        df["rank_tree_importance"] = (
+            df["tree_importance"].rank(ascending=False, method="first").astype(int)
+        )
 
-        df["rank_tree_importance"] = np.arange(1, len(df) + 1)
+        # --- Permutation importance (PRIMARY) ---
+        perm_df = None
+        if X_eval is not None and y_eval is not None:
+            if perm_scoring is None:
+                perm_scoring = "average_precision" if task == "hi" else "neg_mean_absolute_error"
+            try:
+                perm = permutation_importance(
+                    fitted_model,            # full pipeline: preprocessing applied
+                    X_eval,
+                    y_eval,
+                    scoring=perm_scoring,
+                    n_repeats=perm_n_repeats,
+                    random_state=random_state,
+                    n_jobs=perm_n_jobs,
+                )
+                perm_df = pd.DataFrame({
+                    "feature_idx": np.arange(len(perm.importances_mean), dtype=int),
+                    "permutation_importance_mean": perm.importances_mean.astype(float),
+                    "permutation_importance_std": perm.importances_std.astype(float),
+                })
+                perm_df["permutation_scoring"] = perm_scoring
+                perm_df["permutation_eval_set"] = eval_set_name
+                perm_df["permutation_n_repeats"] = int(perm_n_repeats)
+
+                logger.info(
+                    f"  DT permutation importance computed on '{eval_set_name}' set "
+                    f"(scoring={perm_scoring}, n_repeats={perm_n_repeats})"
+                )
+            except Exception as exc:  # robust fallback: impurity ordering
+                logger.warning(
+                    f"  DT permutation importance failed ({exc}); "
+                    f"falling back to impurity-based ordering."
+                )
+                perm_df = None
+
+        if perm_df is not None:
+            df = df.merge(perm_df, on="feature_idx", how="left")
+            df["permutation_importance_rank"] = (
+                df["permutation_importance_mean"]
+                .rank(ascending=False, method="first")
+                .astype(int)
+            )
+            df = df.sort_values(
+                ["permutation_importance_mean", "feature_idx"],
+                ascending=[False, True],
+            ).reset_index(drop=True)
+        else:
+            # Permutation unavailable: original impurity-based ordering
+            df = df.sort_values(
+                ["tree_importance", "minimum_depth"],
+                ascending=[False, True],
+                na_position="last",
+            ).reset_index(drop=True)
 
         return df
 
@@ -708,11 +784,9 @@ def run_single_fold(
 
     elif inner_split_strategy == "random_shuffle":
         # Random shuffle:
-        # mix the same outer-training molecules, but keep the same validation
-        # proportion as the corresponding OOD holdout split.
+        # mix the same outer-training molecules, but keep the same validation proportion as the corresponding OOD holdout split.
        
-        # If joint stratification is impossible because some strati are too small,
-        # we go back to target-only stratification, then to no stratification.
+        # If joint stratification is impossible because some strat are too small, we go back to target-only stratification, then to no stratification.
 
         val_frac = kwargs.get("random_val_fraction", None)
 
@@ -807,10 +881,12 @@ def run_single_fold(
     complexity = None
     feature_importance = None
 
-    if (
-        artifacts.get("save_complexity", False)
-        or artifacts.get("save_feature_importance", False)
-    ):
+    want_complexity = artifacts.get("save_complexity", False)
+    want_feature_importance = artifacts.get("save_feature_importance", False)
+
+    # Complexity is cheap (no data needed); compute it whenever either artifact
+    # is requested, preserving the original behaviour of the returned dict.
+    if want_complexity or want_feature_importance:
         complexity = _extract_complexity_metrics(
             fitted_model=best_model,
             model_name=model_name,
@@ -818,11 +894,34 @@ def run_single_fold(
             n_features=X_train.shape[1],
         )
 
+    # Feature importance is computed ONLY when it will be saved, because the
+    # permutation-importance step is the expensive part.
+    if want_feature_importance:
+        # Permutation-importance settings (overridable via config kwargs).
+        perm_n_repeats = kwargs.get("perm_n_repeats", DEFAULT_PERM_N_REPEATS)
+        perm_scoring = kwargs.get("perm_scoring", None)
+        perm_n_jobs = kwargs.get("perm_n_jobs", DEFAULT_PERM_N_JOBS)
+        perm_eval_set = kwargs.get("perm_eval_set", "test")  # "test" or "train"
+
+        if perm_eval_set == "train":
+            X_perm, y_perm = X_train, y_train
+        else:
+            perm_eval_set = "test"
+            X_perm, y_perm = X_test, y_test
+
         feature_importance = _extract_feature_importance(
             fitted_model=best_model,
             model_name=model_name,
             fp_type=fp_type,
             n_features=X_train.shape[1],
+            X_eval=X_perm,
+            y_eval=y_perm,
+            task=task,
+            perm_n_repeats=perm_n_repeats,
+            perm_scoring=perm_scoring,
+            perm_n_jobs=perm_n_jobs,
+            random_state=random_state,
+            eval_set_name=perm_eval_set,
         )
 
     elapsed = time.time() - t0
