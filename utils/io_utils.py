@@ -13,15 +13,13 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 from typing import Optional
-
+from rdkit import Chem
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Project root detection
-# ---------------------------------------------------------------------------
 
 def get_project_root() -> Path:
     """
@@ -36,10 +34,40 @@ def get_project_root() -> Path:
 
 PROJECT_ROOT = get_project_root()
 
+def _filter_invalid_smiles(
+    df: pd.DataFrame,
+    task: str,
+    dataset: str,
+    fold_idx: int,
+    split: str,
+) -> pd.DataFrame:
+    """
+    Remove rows with invalid SMILES.
 
-# ---------------------------------------------------------------------------
+    """
+    if "smiles" not in df.columns:
+        raise ValueError(f"Missing 'smiles' column in {task}/{dataset} fold {fold_idx} {split}")
+
+    valid_mask = df["smiles"].astype(str).map(lambda smi: Chem.MolFromSmiles(smi) is not None)
+    n_invalid = int((~valid_mask).sum())
+
+    if n_invalid > 0:
+        invalid_examples = df.loc[~valid_mask, "smiles"].astype(str).head(5).tolist()
+
+        logger.warning(
+            f"Removed {n_invalid} invalid SMILES from {task}/{dataset} "
+            f"fold {fold_idx} {split}. Examples: {invalid_examples}"
+        )
+
+        df = df.loc[valid_mask].copy()
+    else:
+        logger.info(
+            f"All SMILES valid for {task}/{dataset} fold {fold_idx} {split}."
+        )
+
+    return df.reset_index(drop=True)
+
 # Data loading
-# ---------------------------------------------------------------------------
 
 def load_fold(
     task: str,
@@ -64,6 +92,9 @@ def load_fold(
 
     train = pd.read_csv(train_path, index_col=0)
     test = pd.read_csv(test_path, index_col=0)
+    
+    train = _filter_invalid_smiles(train, task, dataset, fold_idx, "train")
+    test = _filter_invalid_smiles(test, task, dataset, fold_idx, "test")
 
     logger.info(
         f"Loaded {task}/{dataset} fold {fold_idx}: "
@@ -72,9 +103,7 @@ def load_fold(
     return train, test
 
 
-# ---------------------------------------------------------------------------
 # Feature cache paths
-# ---------------------------------------------------------------------------
 
 def get_feature_cache_path(
     task: str, dataset: str, fp_type: str, split: str, fold_idx: int,
@@ -88,9 +117,7 @@ def get_feature_cache_path(
     return str(features_dir / f"{fp_type}_{split}_{fold_idx}.npz")
 
 
-# ---------------------------------------------------------------------------
 # Results directory
-# ---------------------------------------------------------------------------
 
 def get_results_dir(
     task: str, dataset: str, model_name: str, fp_type: str,
@@ -105,9 +132,7 @@ def get_results_dir(
     return results_dir
 
 
-# ---------------------------------------------------------------------------
 # Save predictions
-# ---------------------------------------------------------------------------
 
 def save_predictions(
     df: pd.DataFrame,
@@ -136,9 +161,7 @@ def save_predictions(
     return str(out_path)
 
 
-# ---------------------------------------------------------------------------
 # Save hyperparameters
-# ---------------------------------------------------------------------------
 
 def save_params(
     params: dict,
@@ -152,12 +175,6 @@ def save_params(
     """
     Save best hyperparameters for a fold as JSON.
 
-    Parameters
-    ----------
-    params : Best hyperparameters from inner CV.
-    extra_info : Additional info (inner_cv_score, training_time, etc.)
-
-    Returns the path of the saved file.
     """
     results_dir = get_results_dir(task, dataset, model_name, fp_type)
 

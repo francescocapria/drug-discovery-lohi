@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_sol_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 147,
+  "sparsity": 0.11976047904191611,
+  "l1_norm": 21.04198928178353,
+  "l2_norm": 2.384014921469537,
+  "approx_margin": 0.41946046184290964,
+  "intercept": [
+    -2.4330183384230915
+  ],
+  "C": 0.1,
+  "class_weight": null,
+  "penalty": "elasticnet",
+  "l1_ratio": 0.0,
+  "dual": false
+}

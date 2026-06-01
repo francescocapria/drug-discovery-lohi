@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_drd2_hi_inner_ood_holdout_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 137,
+  "sparsity": 0.17964071856287422,
+  "l1_norm": 147.209510082002,
+  "l2_norm": 20.45841251205484,
+  "approx_margin": 0.04887964789109437,
+  "intercept": [
+    -6.6673386429533545
+  ],
+  "C": 10.0,
+  "class_weight": "balanced",
+  "penalty": "deprecated",
+  "l1_ratio": 1.0,
+  "dual": false
+}

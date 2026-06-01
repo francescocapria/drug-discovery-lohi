@@ -49,6 +49,7 @@ from utils.io_utils import (
 )
 
 import logging
+from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -706,6 +707,48 @@ def _make_joint_stratify_labels(
 
     return labels
 
+def _assert_inner_reconstructs_outer_train(
+    train_df: pd.DataFrame,
+    inner_train_df: pd.DataFrame,
+    inner_val_df: pd.DataFrame,
+    fold_idx: int,
+) -> None:
+    """
+    Check that the OOD inner train/validation subsets exactly reconstruct
+    the outer training set.
+
+    """
+    expected_n = len(train_df)
+    got_n = len(inner_train_df) + len(inner_val_df)
+
+    if got_n != expected_n:
+        raise ValueError(
+            f"Inner holdout reconstruction mismatch for outer fold {fold_idx}: "
+            f"|inner_train| + |inner_val| = {got_n}, but |outer_train| = {expected_n}."
+        )
+
+    outer_smiles = Counter(train_df["smiles"].astype(str))
+    inner_smiles = Counter(
+        pd.concat(
+            [
+                inner_train_df["smiles"].astype(str),
+                inner_val_df["smiles"].astype(str),
+            ],
+            ignore_index=True,
+        )
+    )
+
+    if outer_smiles != inner_smiles:
+        missing = list((outer_smiles - inner_smiles).elements())[:5]
+        extra = list((inner_smiles - outer_smiles).elements())[:5]
+
+        raise ValueError(
+            f"Inner holdout subsets do not reconstruct the outer training SMILES "
+            f"for fold {fold_idx}.\n"
+            f"Missing examples: {missing}\n"
+            f"Extra examples: {extra}"
+        )
+
 
 # Single outer fold execution
 
@@ -740,8 +783,12 @@ def run_single_fold(
     train_cache = get_feature_cache_path(task, dataset, fp_type, "train", fold_idx)
     test_cache = get_feature_cache_path(task, dataset, fp_type, "test", fold_idx)
 
-    X_train = compute_fingerprints(train_df["smiles"].tolist(), fp_type, train_cache)
-    X_test = compute_fingerprints(test_df["smiles"].tolist(), fp_type, test_cache)
+    X_train, valid_train = compute_fingerprints(train_df["smiles"].tolist(), fp_type, train_cache)
+    X_test, valid_test = compute_fingerprints(test_df["smiles"].tolist(), fp_type, test_cache)
+
+    # DataFrames are already cleaned in load_fold, so no invalid SMILES should remain. This assert guards against a stale cache built before cleaning.
+    assert valid_train.all(), "Unexpected invalid SMILES in train after load_fold cleaning"
+    assert valid_test.all(), "Unexpected invalid SMILES in test after load_fold cleaning"
 
     # Cast to bool only for KNN/Jaccard distance
     if model_name.startswith("knn") and fp_type in ["ecfp4", "maccs", "rdkit_topo"]:
@@ -809,7 +856,7 @@ def run_single_fold(
         # fallback: stratify by target only
             stratify_candidates.append(y_train)
 
-    # final fallback: no stratification
+        # final fallback: no stratification
         stratify_candidates.append(None)
 
         split_done = False
@@ -894,8 +941,7 @@ def run_single_fold(
             n_features=X_train.shape[1],
         )
 
-    # Feature importance is computed ONLY when it will be saved, because the
-    # permutation-importance step is the expensive part.
+    # Feature importance is computed ONLY when it will be saved, because the permutation-importance step is the expensive part.
     if want_feature_importance:
         # Permutation-importance settings (overridable via config kwargs).
         perm_n_repeats = kwargs.get("perm_n_repeats", DEFAULT_PERM_N_REPEATS)
@@ -1008,6 +1054,12 @@ def run_nested_cv(
             "is currently valid only for Hi tasks. For Lo, use 'kfold' or 'random_shuffle', "
             "or implement a dedicated cluster-aware holdout."
         )
+    if inner_split_strategy == "holdout" and task == "hi" and dataset == "kdr":
+        raise ValueError(
+            "OOD holdout reconstruction is not valid for KDR-Hi because the outer "
+            "training folds are restricted to 500 molecules. Exclude KDR from the "
+            "OOD-vs-random protocol comparison."
+        )
 
     # Inner subset reconstruction map (only used for holdout / random_shuffle):
     #   test_1.csv = F3, test_2.csv = F2, test_3.csv = F1
@@ -1038,6 +1090,13 @@ def run_nested_cv(
             # load_fold returns (train_df, test_df); the TEST portion is F_i
             _, inner_train_df = load_fold(task, dataset, train_inner_idx)
             _, inner_val_df = load_fold(task, dataset, val_inner_idx)
+            
+            _assert_inner_reconstructs_outer_train(
+                train_df=train_df,
+                inner_train_df=inner_train_df,
+                inner_val_df=inner_val_df,
+                fold_idx=fold_idx,
+            )
 
             if inner_split_strategy == "holdout":
                 # OOD holdout: use the two chemically distinct subsets directly
@@ -1048,12 +1107,14 @@ def run_nested_cv(
                     task, dataset, fp_type, "test", val_inner_idx
                 )
 
-                X_inner_train = compute_fingerprints(
+                X_inner_train, valid_itr = compute_fingerprints(
                     inner_train_df["smiles"].tolist(), fp_type, inner_train_cache
                 )
-                X_inner_val = compute_fingerprints(
+                X_inner_val, valid_ivl = compute_fingerprints(
                     inner_val_df["smiles"].tolist(), fp_type, inner_val_cache
                 )
+                assert valid_itr.all() and valid_ivl.all(), \
+                    "Unexpected invalid SMILES in inner holdout subsets"
 
                 y_inner_train = inner_train_df["value"].values
                 y_inner_val = inner_val_df["value"].values

@@ -17,6 +17,7 @@ import logging
 from pathlib import Path
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -32,20 +33,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Tanimoto kernel (for SVM on binary fingerprints)
-# ---------------------------------------------------------------------------
 
 def tanimoto_kernel(X, Y):
+    """
+    Two molecules with all-zero fingerprints give a 0/0 denominator: by convention their similarity is set to 0 (no shared bits, nothing in common to measure).
+    """
+    X = np.asarray(X, dtype=np.float64)
+    Y = np.asarray(Y, dtype=np.float64)
+
+    if not (np.array_equal(X, X.astype(bool)) and np.array_equal(Y, Y.astype(bool))):
+        raise ValueError(
+            "tanimoto_kernel requires binary (0/1) fingerprints; "
+            "got non-binary input (did you pass rdkit_desc or scaled features?)."
+        )
+
     XY = X @ Y.T
-    X_sq = (X ** 2).sum(axis=1).reshape(-1, 1)
-    Y_sq = (Y ** 2).sum(axis=1).reshape(-1, 1)
-    return XY / (X_sq + Y_sq.T - XY)
+    X_sq = (X * X).sum(axis=1).reshape(-1, 1)
+    Y_sq = (Y * Y).sum(axis=1).reshape(-1, 1)
+    denom = X_sq + Y_sq.T - XY
+
+    # Avoid 0/0 for all-zero fingerprint pairs: define similarity = 0 there.
+    K = np.divide(XY, denom, out=np.zeros_like(XY), where=denom > 0)
+    return K
 
 
-# ---------------------------------------------------------------------------
 # Model registry
-# ---------------------------------------------------------------------------
 
 def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4"):
     """
@@ -74,6 +87,12 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
 
         # tanimoto kernel
         kernel_type = fixed.get("kernel")
+        
+        if kernel_type == "tanimoto" and fp_type not in ["ecfp4", "maccs", "rdkit_topo"]:
+            raise ValueError(
+                "Tanimoto kernel can only be used with binary fingerprints: "
+                "ecfp4, maccs, rdkit_topo."
+        )
 
         # Scaling: always for rdkit_desc, for Lo binary fingerprints
         # except Tanimoto which must operate on unscaled binary fingerprints
@@ -184,9 +203,7 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
         )
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(

@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_sol_hi_random_shuffle_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 1024,
+  "sparsity": 0.0,
+  "l1_norm": 68.58644188050518,
+  "l2_norm": 2.8965413724514124,
+  "approx_margin": 0.3452393290532136,
+  "intercept": [
+    -2.736627633881423
+  ],
+  "C": 0.05,
+  "class_weight": null,
+  "penalty": "elasticnet",
+  "l1_ratio": 0.0,
+  "dual": false
+}

@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_hiv_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 105,
+  "sparsity": 0.8974609375,
+  "l1_norm": 22.392328583239337,
+  "l2_norm": 3.3012509791870976,
+  "approx_margin": 0.3029154724389482,
+  "intercept": [
+    -4.489898501538395
+  ],
+  "C": 0.1,
+  "class_weight": null,
+  "penalty": "elasticnet",
+  "l1_ratio": 1.0,
+  "dual": false
+}

@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_drd2_hi_random_shuffle_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 1022,
+  "sparsity": 0.001953125,
+  "l1_norm": 299.23483565112974,
+  "l2_norm": 11.879204569728632,
+  "approx_margin": 0.08418072052974536,
+  "intercept": [
+    -2.527282645516787
+  ],
+  "C": 0.5,
+  "class_weight": "balanced",
+  "penalty": "deprecated",
+  "l1_ratio": 0.0,
+  "dual": false
+}

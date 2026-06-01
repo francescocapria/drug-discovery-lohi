@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_drd2_hi_random_shuffle_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 1004,
+  "sparsity": 0.01953125,
+  "l1_norm": 155.30120976933785,
+  "l2_norm": 6.207064274672897,
+  "approx_margin": 0.16110675767936986,
+  "intercept": [
+    -1.9299426054061526
+  ],
+  "C": 0.1,
+  "class_weight": "balanced",
+  "n_support_per_class": [
+    428,
+    827
+  ],
+  "n_support_total": 1255
+}

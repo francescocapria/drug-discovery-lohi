@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_kdr_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 138,
+  "sparsity": 0.17365269461077848,
+  "l1_norm": 7.7062714369770084,
+  "l2_norm": 1.0170513930900082,
+  "approx_margin": 0.9832344823419369,
+  "intercept": [
+    -0.7028906142565237
+  ],
+  "C": 0.01,
+  "class_weight": "balanced",
+  "n_support_per_class": [
+    70,
+    234
+  ],
+  "n_support_total": 304
+}

@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_hiv_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "effective_depth": 10,
+  "n_nodes": 535,
+  "n_leaves": 268,
+  "n_features_used": 121,
+  "used_feature_fraction": 0.7245508982035929,
+  "criterion": "entropy",
+  "max_depth": 10,
+  "max_features": "sqrt",
+  "min_samples_leaf": 5,
+  "min_samples_split": 10,
+  "ccp_alpha": 0.0,
+  "class_weight": null,
+  "feature_min_depth_mean": 5.892561983471074,
+  "feature_min_depth_std": 2.0033098764380117,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 9
+}

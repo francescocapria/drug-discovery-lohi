@@ -1,0 +1,24 @@
+{
+  "fold": 1,
+  "best_params": {
+    "metric": "jaccard",
+    "n_neighbors": 15,
+    "weights": "distance"
+  },
+  "inner_cv_score": 0.8907080653310782,
+  "train_metrics": {
+    "pr_auc": 0.9986,
+    "roc_auc": 0.9973,
+    "bedroc": 1.0,
+    "f1_at_05": 0.9787,
+    "positive_rate": 0.7061
+  },
+  "test_metrics": {
+    "pr_auc": 0.6787,
+    "roc_auc": 0.5935,
+    "bedroc": 0.79,
+    "f1_at_05": 0.7308,
+    "positive_rate": 0.6176
+  },
+  "time_seconds": 2.4
+}

@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_drd2_hi_random_shuffle_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "effective_depth": 20,
+  "n_nodes": 125,
+  "n_leaves": 63,
+  "n_features_used": 58,
+  "used_feature_fraction": 0.056640625,
+  "criterion": "gini",
+  "max_depth": 20,
+  "max_features": "sqrt",
+  "min_samples_leaf": 2,
+  "min_samples_split": 20,
+  "ccp_alpha": 0.001,
+  "class_weight": null,
+  "feature_min_depth_mean": 8.706896551724139,
+  "feature_min_depth_std": 4.605126905622108,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 19
+}

@@ -1,0 +1,26 @@
+{
+  "fold": 1,
+  "best_params": {
+    "metric": "euclidean",
+    "n_neighbors": 3,
+    "weights": "distance"
+  },
+  "inner_split_strategy": "kfold",
+  "inner_selection_score": -0.41961689300226146,
+  "inner_train_score": -0.02013475030983291,
+  "train_metrics": {
+    "mean_spearman": 0.9916,
+    "std_spearman": 0.0,
+    "mean_r2": 0.9831,
+    "mean_mae": 0.0322,
+    "n_clusters": 1
+  },
+  "test_metrics": {
+    "mean_spearman": 0.2445,
+    "std_spearman": 0.3935,
+    "mean_r2": -0.5566,
+    "mean_mae": 0.7723,
+    "n_clusters": 50
+  },
+  "time_seconds": 2.9
+}
