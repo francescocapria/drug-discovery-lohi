@@ -12,14 +12,13 @@ fingerprint:
 model:
   name: lr
   fixed:
-    max_iter: 30000
-    tol: 0.001
+    max_iter: 8000
+    tol: 0.002
     random_state: 42
     solver: saga
-    penalty: elasticnet
   search:
-    C: [0.01, 0.05, 0.1, 0.5, 1.0]
-    l1_ratio: [0.0, 0.5, 1.0]
+    C: [0.01, 0.1, 1.0]
+    l1_ratio: [0.0, 1.0]
     class_weight: [null, balanced]
 
 cv:

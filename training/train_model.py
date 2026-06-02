@@ -144,11 +144,46 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
 
     elif name == "lr":
         from sklearn.linear_model import LogisticRegression
+
+        def _prepare_lr_fixed_params(params: dict) -> dict:
+            """
+            Prepare LogisticRegression parameters for scikit-learn >= 1.8.
+
+            In sklearn 1.8, 'penalty' is deprecated. The penalty type is now
+            controlled through l1_ratio:
+                l1_ratio = 0.0  -> L2-like
+                l1_ratio = 1.0  -> L1-like
+                0 < l1_ratio < 1 -> ElasticNet
+            """
+            params = dict(params)
+
+            penalty = params.pop("penalty", None)
+
+            if penalty == "l2":
+                params.setdefault("l1_ratio", 0.0)
+            elif penalty == "l1":
+                params.setdefault("l1_ratio", 1.0)
+            elif penalty == "elasticnet":
+                params.setdefault("l1_ratio", 0.0)
+            elif penalty is None:
+                params.setdefault("l1_ratio", 0.0)
+            elif penalty == "none":
+                params["C"] = np.inf
+                params.setdefault("l1_ratio", 0.0)
+            else:
+                raise ValueError(f"Unsupported LogisticRegression penalty: {penalty}")
+
+            return params
+
         def factory():
-            model = LogisticRegression(**fixed)
+            lr_fixed = _prepare_lr_fixed_params(fixed)
+            model = LogisticRegression(**lr_fixed)
+
             if fp_type == "rdkit_desc":
                 return Pipeline([("scaler", StandardScaler()), ("model", model)])
+
             return model
+
         return factory
     
     elif name == "linreg":

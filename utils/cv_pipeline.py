@@ -55,8 +55,8 @@ logger = logging.getLogger(__name__)
 
 
 # Default permutation-importance settings (can be overridden via kwargs)
-DEFAULT_PERM_N_REPEATS = 10
-DEFAULT_PERM_N_JOBS = -1
+DEFAULT_PERM_N_REPEATS = 10 # Number of times each feature is shuffled
+DEFAULT_PERM_N_JOBS = -1 
 
 
 # Artifact utilities
