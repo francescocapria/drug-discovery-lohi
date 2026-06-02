@@ -2,28 +2,28 @@ experiment:
   name: svm_tanimoto_hiv_hi
   task: hi
   dataset: hiv
+
 fingerprint:
   types:
-  - ecfp4
-  - maccs
+    - ecfp4
+
 model:
   name: svm
   fixed:
     kernel: tanimoto
     probability: false
   search:
-    C:
-    - 0.1
-    - 0.5
-    - 1.0
-    - 2.0
-    - 5.0
-    - 10.0
-    class_weight:
-    - null
-    - balanced
+    C: [0.1, 1.0]
+    class_weight: [null, balanced]
+
 cv:
   inner_k: 2
   scoring: average_precision
   search_strategy: grid
   random_state: 42
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: false
+  save_cv_results: true

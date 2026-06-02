@@ -4,19 +4,26 @@ experiment:
   dataset: hiv
 
 fingerprint:
-  types: [ecfp4, maccs, rdkit_desc]
+  types:
+    - ecfp4
+    - maccs
+    - rdkit_desc
 
 model:
   name: xgb
   fixed:
     random_state: 42
     n_jobs: -1
+    eval_metric: logloss
+    tree_method: hist
   search:
     n_estimators: [100, 200, 300]
-    learning_rate: [0.05, 0.1, 0.2]
-    max_depth: [3, 4, 6]
+    learning_rate: [0.03, 0.05, 0.1]
+    max_depth: [3, 4, 5]
     subsample: [0.8, 1.0]
     colsample_bytree: [0.8, 1.0]
+    min_child_weight: [1, 5]
+    reg_lambda: [1.0, 5.0]
 
 cv:
   inner_k: 2
@@ -24,3 +31,9 @@ cv:
   search_strategy: random
   n_iter: 40
   random_state: 42
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: true
+  save_cv_results: true

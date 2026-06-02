@@ -2,36 +2,32 @@ experiment:
   name: svm_poly_hiv_hi
   task: hi
   dataset: hiv
+
 fingerprint:
   types:
-  - ecfp4
-  - maccs
-  - rdkit_desc
+    - ecfp4
+    - maccs
+
 model:
   name: svm
   fixed:
     kernel: poly
     probability: false
   search:
-    C:
-    - 0.1
-    - 1.0
-    - 5.0
-    - 10.0
-    degree:
-    - 2
-    - 3
-    coef0:
-    - 0.0
-    - 1.0
-    gamma:
-    - scale
-    - auto
-    class_weight:
-    - null
-    - balanced
+    C: [0.1, 1.0]
+    degree: [2]
+    coef0: [0.0, 1.0]
+    gamma: [scale]
+    class_weight: [null, balanced]
+
 cv:
   inner_k: 2
   scoring: average_precision
   search_strategy: grid
   random_state: 42
+
+artifacts:
+  save_model: true
+  save_complexity: true
+  save_feature_importance: false
+  save_cv_results: true
