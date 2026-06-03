@@ -2,21 +2,17 @@
 # coding: utf-8
 
 # Cross-dataset plots for Hi OOD-vs-Random-Shuffle analysis.
-# 
-# Reads the CSV tables produced by 01_cross_dataset_tables_hi.py and generates
+#
+# Reads the CSV tables produced by 01-cross_dataset_tables_hi.py and generates
 # paper-style figures for the datasets where the OOD inner holdout can be
 # reconstructed consistently from the Lo-Hi folds: DRD2, HIV and Sol.
-# 
+#
 # KDR-Hi is excluded from this specific OOD-holdout vs random-shuffle comparison
 # because its outer training folds are restricted to 500 molecules and cannot be
-# reconstructed as train_i = F_a ∪ F_b.
-# 
+# reconstructed as train_i = F_a u F_b.
+#
 # All figures are saved to:
 # results/results_ood_vs_random_shuffle/hi/cross_dataset/figures/
-# 
-
-# In[1]:
-
 
 from pathlib import Path
 
@@ -24,12 +20,26 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import TwoSlopeNorm, Normalize
 from matplotlib.lines import Line2D
 
+try:
+    from adjustText import adjust_text as _adjust_text
+    HAS_ADJUST_TEXT = True
+except ImportError:
+    HAS_ADJUST_TEXT = False
+    import warnings
+    warnings.warn(
+        "adjustText is not installed. Labels in Figure 1 will overlap. "
+        "Install with: pip install adjustText",
+        ImportWarning,
+        stacklevel=2,
+    )
 
-# In[2]:
 
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
 
 try:
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -54,8 +64,9 @@ print("Data dir:", DATA_DIR)
 print("Figure dir:", FIG_DIR)
 
 
-# In[3]:
-
+# ---------------------------------------------------------------------------
+# Style constants
+# ---------------------------------------------------------------------------
 
 plt.rcParams.update({
     "figure.dpi": 150,
@@ -90,16 +101,17 @@ DATASET_LABELS = {
     "drd2": "DRD2",
     "hiv": "HIV",
     "sol": "Sol",
-    "kdr": "KDR",  # kept only for safety, but excluded from this analysis
+    "kdr": "KDR",  # kept only for safety; excluded from all analyses
 }
 
 FP_MARKERS = {"ECFP4": "o", "MACCS": "s", "RDKit desc": "D"}
 
 
-# In[4]:
+# ---------------------------------------------------------------------------
+# Load tables
+# ---------------------------------------------------------------------------
 
-
-print("Loading cross-dataset tables …")
+print("Loading cross-dataset tables ...")
 
 per_fold = pd.read_csv(DATA_DIR / "cross_dataset_protocol_per_fold.csv")
 summary = pd.read_csv(DATA_DIR / "cross_dataset_protocol_summary.csv")
@@ -110,18 +122,17 @@ concentration = pd.read_csv(DATA_DIR / "cross_dataset_feature_concentration.csv"
 
 VALID_DATASETS = set(DATASET_ORDER)
 
+
 def _drop_excluded_datasets(df: pd.DataFrame, name: str) -> pd.DataFrame:
     if "dataset" not in df.columns:
         return df
-
     before = len(df)
     df = df[df["dataset"].isin(VALID_DATASETS)].copy()
     after = len(df)
-
     if before != after:
         print(f"  {name}: dropped {before - after} rows from excluded datasets")
-
     return df
+
 
 summary = _drop_excluded_datasets(summary, "summary")
 delta = _drop_excluded_datasets(delta, "delta")
@@ -142,13 +153,34 @@ for name, df in {
 
 print("OK: KDR excluded from all plotting tables.")
 
+# Validate no duplicated per-fold rows before any pivot.
+_dup_cols = ["dataset", "model", "fingerprint", "protocol", "fold"]
+_n_dup = per_fold.duplicated(subset=_dup_cols).sum()
+if _n_dup > 0:
+    raise ValueError(
+        f"per_fold table has {_n_dup} duplicated rows. "
+        "Pivots in Figure 2b will silently average duplicates. "
+        "Re-run 01-cross_dataset_tables_hi.py to regenerate clean tables."
+    )
+print("OK: per_fold table has no duplicated rows.")
 
-# ## Inner validation vs OOD test scatter (2×2 by dataset)
 
-# In[5]:
-
+# ---------------------------------------------------------------------------
+# Figure 1: Inner validation vs OOD test scatter
+# ---------------------------------------------------------------------------
 
 def plot_figure1(summary: pd.DataFrame):
+    """
+    Scatter plot of mean inner validation PR-AUC vs mean final OOD test PR-AUC.
+
+    The identity line is shown for reference. Points above the line indicate
+    that inner validation overestimates test performance (optimism). The figure
+    should be read as: does OOD holdout produce inner scores that are closer
+    to test scores than random shuffle does?
+
+    Note: the identity line is not a target. Inner CV scores are not expected
+    to equal test scores; they are expected to rank hyperparameters correctly.
+    """
     datasets = [d for d in DATASET_ORDER if d in summary["dataset"].unique()]
     n = len(datasets)
     nrows, ncols = 1, n
@@ -164,7 +196,6 @@ def plot_figure1(summary: pd.DataFrame):
         ax = axes[idx // ncols, idx % ncols]
         sub = summary[summary["dataset"] == dataset]
 
-        # Determine axis limits
         all_vals = pd.concat([sub["inner_mean"], sub["test_mean"]])
         lo = max(0, all_vals.min() - 0.05)
         hi = min(1, all_vals.max() + 0.05)
@@ -173,7 +204,6 @@ def plot_figure1(summary: pd.DataFrame):
         ax.set_axisbelow(True)
         ax.grid(True, linestyle="--", color="lightgrey", alpha=0.5, zorder=0)
 
-        # Identity diagonal
         ax.plot(lims, lims, ls="--", lw=1.2, color="#7f8c8d", zorder=1)
         ax.fill_between(
             lims, lims, [lims[0], lims[0]],
@@ -195,8 +225,7 @@ def plot_figure1(summary: pd.DataFrame):
                 zorder=3,
             )
 
-        try:
-            from adjustText import adjust_text
+        if HAS_ADJUST_TEXT:
             texts = []
             for _, row in sub.iterrows():
                 ms = MODEL_SHORT.get(row["model"], row["model"][:2])
@@ -206,11 +235,9 @@ def plot_figure1(summary: pd.DataFrame):
                     row["inner_mean"], row["test_mean"], label,
                     fontsize=7, color="#333333",
                 ))
-            adjust_text(texts, ax=ax,
-                        arrowprops=dict(arrowstyle="-", color="grey",
-                                        lw=0.4, alpha=0.4))
-        except ImportError:
-            pass
+            _adjust_text(texts, ax=ax,
+                         arrowprops=dict(arrowstyle="-", color="grey",
+                                         lw=0.4, alpha=0.4))
 
         ax.set_xlim(lims)
         ax.set_ylim(lims)
@@ -218,16 +245,14 @@ def plot_figure1(summary: pd.DataFrame):
         ax.set_xlabel("Mean inner validation PR-AUC", fontsize=10)
         ax.set_ylabel("Mean final OOD test PR-AUC", fontsize=10)
         ax.set_title(DATASET_LABELS.get(dataset, dataset),
-                      fontsize=13, fontweight="bold", pad=8)
+                     fontsize=13, fontweight="bold", pad=8)
 
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-    # Hide unused panels
     for idx in range(len(datasets), nrows * ncols):
         axes[idx // ncols, idx % ncols].set_visible(False)
 
-    # Shared legend
     protocol_handles = [
         Line2D([0], [0], marker="o", color="w", markerfacecolor=c,
                markersize=10, markeredgecolor="black", markeredgewidth=0.5,
@@ -257,15 +282,29 @@ def plot_figure1(summary: pd.DataFrame):
     plt.show()
     plt.close(fig)
 
+
 plot_figure1(summary)
 
 
-# ## Protocol delta heatmap
-
-# In[6]:
-
+# ---------------------------------------------------------------------------
+# Figure 2: Protocol delta heatmap
+# ---------------------------------------------------------------------------
 
 def plot_figure2(delta: pd.DataFrame):
+    """
+    Heatmap of protocol deltas.
+
+    Columns:
+      delta_inner_optimism = inner_random - inner_OOD  (positive = random inflated)
+      delta_test_benefit   = test_OOD - test_random    (positive = OOD better)
+
+    Note: delta_gap (not shown here) = delta_inner_optimism + delta_test_benefit
+    algebraically. It is not an independent quantity.
+
+    Colormap: TwoSlopeNorm is used when the data spans both sides of zero.
+    When all values are one-sided, a plain Normalize is used to avoid wasting
+    half the color range on values that do not appear in the data.
+    """
     if len(delta) == 0:
         print("No delta data — skipping Figure 2.")
         return
@@ -277,7 +316,6 @@ def plot_figure2(delta: pd.DataFrame):
         + plot_df["fingerprint"]
     )
 
-    # Sort
     for col, order in [("dataset", {"drd2": 0, "hiv": 1, "sol": 2, "kdr": 99}),
                        ("model", {"Decision Tree": 0, "Logistic Regression": 1, "Linear SVM": 2}),
                        ("fingerprint", {"ECFP4": 0, "MACCS": 1, "RDKit desc": 2})]:
@@ -294,8 +332,17 @@ def plot_figure2(delta: pd.DataFrame):
     }
 
     mat = plot_df[metrics].values
-    vmax = max(abs(np.nanmin(mat)), abs(np.nanmax(mat)), 0.001)
-    norm = TwoSlopeNorm(vmin=-vmax, vcenter=0, vmax=vmax)
+    vmin_data = np.nanmin(mat)
+    vmax_data = np.nanmax(mat)
+    vmax = max(abs(vmin_data), abs(vmax_data), 0.001)
+
+    # Use TwoSlopeNorm only when data spans both sides of zero.
+    # When all values are one-sided, use plain Normalize to avoid wasting
+    # half the color range.
+    if vmin_data < 0 < vmax_data:
+        norm = TwoSlopeNorm(vmin=-vmax, vcenter=0, vmax=vmax)
+    else:
+        norm = Normalize(vmin=vmin_data - 0.001, vmax=vmax_data + 0.001)
 
     fig, ax = plt.subplots(figsize=(7, max(4, 0.45 * len(experiments))))
     im = ax.imshow(mat, aspect="auto", cmap="RdBu_r", norm=norm)
@@ -315,7 +362,6 @@ def plot_figure2(delta: pd.DataFrame):
             ax.text(j, i, f"{val:+.3f}", ha="center", va="center",
                     fontsize=9, fontweight="bold", color=text_color)
 
-    # Horizontal separators between datasets
     prev_ds = plot_df.iloc[0]["dataset"]
     for i in range(1, len(plot_df)):
         if plot_df.iloc[i]["dataset"] != prev_ds:
@@ -342,6 +388,7 @@ def plot_figure2(delta: pd.DataFrame):
     plt.show()
     plt.close(fig)
 
+
 def plot_figure2b_fold_level_test_benefit(per_fold: pd.DataFrame):
     """
     Plot fold-level OOD test benefit:
@@ -349,6 +396,9 @@ def plot_figure2b_fold_level_test_benefit(per_fold: pd.DataFrame):
 
     This makes the 3-fold variability explicit and avoids over-interpreting
     mean deltas computed from only three outer folds.
+
+    The per_fold table is validated for duplicate rows before pivoting to
+    ensure that pivot_table does not silently average duplicate entries.
     """
     if len(per_fold) == 0:
         print("No per-fold protocol data — skipping Figure 2b.")
@@ -364,10 +414,22 @@ def plot_figure2b_fold_level_test_benefit(per_fold: pd.DataFrame):
         print(f"Missing required columns in per_fold table: {missing}")
         return
 
+    # Guard: each (dataset, model, fingerprint, fold, protocol) must be unique
+    # before pivoting. pivot_table with aggfunc="mean" would silently average
+    # duplicates, producing wrong fold-level deltas.
+    dup_cols = ["dataset", "model", "fingerprint", "protocol", "fold"]
+    n_dup = per_fold.duplicated(subset=dup_cols).sum()
+    if n_dup > 0:
+        raise ValueError(
+            f"per_fold has {n_dup} duplicated rows on {dup_cols}. "
+            "Cannot safely pivot for fold-level delta computation."
+        )
+
     pivot = per_fold.pivot_table(
         index=["dataset", "dataset_label", "model", "model_short", "fingerprint", "fold"],
         columns="protocol",
         values="test_pr_auc",
+        aggfunc="mean",
     ).reset_index()
 
     if "OOD holdout" not in pivot.columns or "Random shuffle" not in pivot.columns:
@@ -403,11 +465,7 @@ def plot_figure2b_fold_level_test_benefit(per_fold: pd.DataFrame):
 
     ax.axhline(0, color="black", linewidth=1.0, linestyle="--", alpha=0.7)
 
-    fold_markers = {
-        1: "o",
-        2: "s",
-        3: "^",
-    }
+    fold_markers = {1: "o", 2: "s", 3: "^"}
 
     for _, row in pivot.iterrows():
         x = exp_to_x[row["experiment"]]
@@ -493,7 +551,8 @@ def plot_figure2b_fold_level_test_benefit(per_fold: pd.DataFrame):
     fig.text(
         0.5,
         -0.04,
-        "Positive values mean that OOD-holdout inner selection produced a higher final test PR-AUC than random-shuffle inner selection on the same outer test fold.",
+        "Positive values mean that OOD-holdout inner selection produced a higher final test PR-AUC "
+        "than random-shuffle inner selection on the same outer test fold.",
         ha="center",
         va="top",
         fontsize=9,
@@ -503,24 +562,35 @@ def plot_figure2b_fold_level_test_benefit(per_fold: pd.DataFrame):
 
     fname = FIG_DIR / "fig2b_fold_level_test_benefit.png"
     fig.savefig(fname, dpi=300, bbox_inches="tight")
-
     print(f"Saved: {fname.name}")
-
     plt.show()
     plt.close(fig)
 
 
 plot_figure2(delta)
-
 plot_figure2b_fold_level_test_benefit(per_fold)
 
 
-# ## Model complexity by protocol
-
-# In[7]:
-
+# ---------------------------------------------------------------------------
+# Figure 3: Model complexity by protocol
+# ---------------------------------------------------------------------------
 
 def plot_figure3(complexity_all: pd.DataFrame):
+    """
+    Heatmap of log2(mean complexity OOD / mean complexity random).
+
+    Complexity measures are model-family-specific and must NOT be compared
+    across families:
+      DT  : number of tree nodes
+      LR  : coefficient-vector L2 norm
+      SVM : weight-vector L2 norm
+
+    The log2 ratio is computed on fold-averaged means (log2(mean/mean)).
+    This is not the same as mean(log2(fold ratio)) and does not propagate
+    fold-level variance. With only 3 outer folds, individual cell values
+    should be interpreted with caution. This figure is recommended for the
+    appendix rather than the main paper.
+    """
     if len(complexity_all) == 0:
         print("No complexity data — skipping Figure 3.")
         return
@@ -611,8 +681,7 @@ def plot_figure3(complexity_all: pd.DataFrame):
         print("No matched OOD/random complexity data — skipping Figure 3.")
         return
 
-    # Stable ordering
-    dataset_order = {"drd2": 0, "hiv": 1, "sol": 2, "kdr": 99}    
+    dataset_order = {"drd2": 0, "hiv": 1, "sol": 2, "kdr": 99}
     model_order = {"DT": 0, "LR": 1, "SVM": 2}
     fp_order = {"ECFP4": 0, "MACCS": 1, "RDKit desc": 2}
 
@@ -634,7 +703,6 @@ def plot_figure3(complexity_all: pd.DataFrame):
         values="log2_ood_over_random",
     )
 
-    # Reorder rows and columns explicitly
     row_order = [
         DATASET_LABELS[d]
         for d in DATASET_ORDER
@@ -646,12 +714,18 @@ def plot_figure3(complexity_all: pd.DataFrame):
     heatmap = heatmap.reindex(index=row_order, columns=col_order)
 
     values = heatmap.values
+    vmin_data = np.nanmin(values)
+    vmax_data = np.nanmax(values)
     vmax = np.nanmax(np.abs(values))
 
     if not np.isfinite(vmax) or vmax == 0:
         vmax = 1.0
 
-    norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+    # Use TwoSlopeNorm only when data spans both sides of zero.
+    if vmin_data < 0 < vmax_data:
+        norm = TwoSlopeNorm(vmin=-vmax, vcenter=0.0, vmax=vmax)
+    else:
+        norm = Normalize(vmin=vmin_data - 0.001, vmax=vmax_data + 0.001)
 
     fig, ax = plt.subplots(figsize=(12, 4.8), constrained_layout=True)
 
@@ -678,7 +752,6 @@ def plot_figure3(complexity_all: pd.DataFrame):
     ax.set_xlabel("Model + fingerprint", fontsize=11)
     ax.set_ylabel("Dataset", fontsize=11)
 
-    # Cell labels
     for i in range(values.shape[0]):
         for j in range(values.shape[1]):
             val = values[i, j]
@@ -691,17 +764,11 @@ def plot_figure3(complexity_all: pd.DataFrame):
                 color = "white" if abs(val) > 0.55 * vmax else "black"
 
             ax.text(
-                j,
-                i,
-                label,
-                ha="center",
-                va="center",
-                fontsize=9,
-                fontweight="bold",
-                color=color,
+                j, i, label,
+                ha="center", va="center",
+                fontsize=9, fontweight="bold", color=color,
             )
 
-    # Grid lines
     ax.set_xticks(np.arange(-0.5, len(heatmap.columns), 1), minor=True)
     ax.set_yticks(np.arange(-0.5, len(heatmap.index), 1), minor=True)
     ax.grid(which="minor", color="white", linewidth=2)
@@ -714,42 +781,58 @@ def plot_figure3(complexity_all: pd.DataFrame):
     )
 
     ax.text(
-        0.5,
-        -0.30,
-        "Complexity measure: DT = number of tree nodes; LR = coefficient-vector L2 norm; SVM = weight-vector L2 norm.",
+        0.5, -0.30,
+        "Complexity measure: DT = number of tree nodes; LR = coefficient-vector L2 norm; "
+        "SVM = weight-vector L2 norm. Measures are not comparable across model families.",
         transform=ax.transAxes,
-        ha="center",
-        va="top",
-        fontsize=9,
+        ha="center", va="top", fontsize=9,
     )
 
     ax.text(
-        0.5,
-        -0.38,
-        "Positive values indicate higher average complexity under OOD holdout; negative values indicate higher average complexity under random shuffle.",
+        0.5, -0.38,
+        "Positive values indicate higher average complexity under OOD holdout; "
+        "negative values indicate higher average complexity under random shuffle. "
+        "Values are log2(mean/mean) across 3 folds; fold-level variance is not shown.",
         transform=ax.transAxes,
-        ha="center",
-        va="top",
-        fontsize=9,
+        ha="center", va="top", fontsize=9,
     )
 
     fname = FIG_DIR / "fig3_complexity_protocol_logratio_heatmap.png"
     fig.savefig(fname, dpi=300, bbox_inches="tight")
-
     print(f"Saved: {fname.name}")
-
     plt.show()
     plt.close(fig)
+
 
 plot_figure3(complexity_all)
 
 
-# ## Top-k feature overlap between OOD and Random
-
-# In[11]:
-
+# ---------------------------------------------------------------------------
+# Figure 4: Top-k feature overlap between OOD and Random
+# ---------------------------------------------------------------------------
 
 def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = True):
+    """
+    Heatmap of top-k feature overlap between OOD holdout and random shuffle.
+
+    Overlap is computed within the same (dataset, model, fingerprint, fold).
+    Feature importance is never compared across model families or fingerprint types.
+
+    Denominator: overlap_percent uses k as denominator (fraction of the top-k
+    list that is shared). This is consistent regardless of model sparsity.
+    See build_feature_overlap docstring for rationale.
+
+    Random baseline interpretation
+    --------------------------------
+    MACCS keys have only 167 bits. Top-50 covers ~30% of the feature space.
+    The expected random overlap between two random subsets of size 50 from
+    167 features is ~30% (hypergeometric). For ECFP4 (2048 bits) the same
+    baseline is ~2.4%. Overlap percentages must be interpreted relative to
+    this baseline and must NOT be compared directly across fingerprint types.
+
+    The random_baseline_percent column from the overlap table is shown in
+    the subtitle of each panel when available.
+    """
     if len(overlap) == 0:
         print("No overlap data — skipping Figure 4.")
         return
@@ -770,10 +853,6 @@ def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = T
         "DT": "DT",
         "LR": "LR",
         "SVM": "SVM",
-        "decision_tree": "DT",
-        "lr": "LR",
-        "svm": "SVM",
-        "svm_linear": "SVM",
     }
 
     fp_map = {
@@ -820,6 +899,15 @@ def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = T
             overlap_std=("overlap_percent", "std"),
         )
     )
+
+    # Compute random baseline per fingerprint for annotation.
+    baseline_by_fp = {}
+    if "random_baseline_percent" in plot_df.columns:
+        for fp_label in plot_df["fingerprint_label"].unique():
+            sub_fp = plot_df[plot_df["fingerprint_label"] == fp_label]
+            baseline_vals = sub_fp["random_baseline_percent"].dropna()
+            if len(baseline_vals) > 0:
+                baseline_by_fp[fp_label] = baseline_vals.iloc[0]
 
     dataset_order = {"drd2": 0, "hiv": 1, "sol": 2, "kdr": 99}
     model_order = {"DT": 0, "LR": 1, "SVM": 2}
@@ -905,7 +993,19 @@ def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = T
             vmax=100,
         )
 
-        ax.set_title(fp, fontsize=12, fontweight="bold", pad=10)
+        # Show random baseline in panel subtitle when available.
+        baseline_pct = baseline_by_fp.get(fp, None)
+        if baseline_pct is not None:
+            subtitle = f"Random baseline ≈ {baseline_pct:.1f}%"
+        else:
+            subtitle = "Random baseline: N/A"
+
+        ax.set_title(
+            f"{fp}\n{subtitle}",
+            fontsize=11,
+            fontweight="bold",
+            pad=10,
+        )
 
         ax.set_xticks(np.arange(len(models)))
         ax.set_xticklabels(models, fontsize=10)
@@ -939,14 +1039,9 @@ def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = T
                     color = "white" if val >= 60 else "black"
 
                 ax.text(
-                    j,
-                    i,
-                    label,
-                    ha="center",
-                    va="center",
-                    fontsize=9,
-                    fontweight="bold",
-                    color=color,
+                    j, i, label,
+                    ha="center", va="center",
+                    fontsize=9, fontweight="bold", color=color,
                 )
 
     axes[0].set_ylabel("Dataset", fontsize=11)
@@ -966,15 +1061,17 @@ def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = T
     )
 
     cbar.set_label(
-        f"Top-{plot_top_k} feature overlap (%)",
+        f"Top-{plot_top_k} feature overlap (%, denominator = {plot_top_k})",
         fontsize=10,
     )
 
     fig.text(
         0.5,
-        -0.04,
-        "Higher values mean that OOD holdout and random shuffle select more similar top-ranked activity features. "
-        "Values are averaged across outer folds; ± indicates fold-level standard deviation.",
+        -0.06,
+        "Overlap = |top-k OOD ∩ top-k random| / k. "
+        "Values are averaged across outer folds; ± indicates fold-level standard deviation. "
+        "Random baseline shown in panel title. "
+        "Do NOT compare overlap percentages across fingerprint types without accounting for the baseline.",
         ha="center",
         va="top",
         fontsize=9,
@@ -996,12 +1093,32 @@ def plot_figure4(overlap: pd.DataFrame, plot_top_k: int = 50, show_std: bool = T
 plot_figure4(overlap, plot_top_k=50, show_std=True)
 
 
-# ## Importance concentration summary
-
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Figure 5: Importance concentration summary
+# ---------------------------------------------------------------------------
 
 def plot_figure5(concentration: pd.DataFrame):
+    """
+    Cumulative importance concentration curves by validation protocol.
+
+    The y-axis shows the fraction of total positive importance captured by
+    the top-k ranked features. Negative permutation importance values are
+    clipped to zero before computing cumulative fractions (see
+    build_feature_concentration in 01-cross_dataset_tables_hi.py).
+
+    Legend values report:
+      - n_positive_importance: features with positive (clipped) importance.
+        This is the count consistent with the concentration curves.
+      - n_nonzero: features with non-zero raw importance (includes negatives).
+        This will be larger than n_positive_importance when permutation
+        importance has negative values (DT models).
+
+    Comparisons are within model family only:
+      DT  : permutation importance (post-hoc, does not affect model selection)
+      LR  : coefficient-based importance (normalized absolute weight)
+      SVM : coefficient-based importance (normalized absolute weight)
+    Concentration curves must NOT be compared across model families.
+    """
     if len(concentration) == 0:
         print("No concentration data — skipping Figure 5.")
         return
@@ -1033,10 +1150,6 @@ def plot_figure5(concentration: pd.DataFrame):
         "DT": "DT",
         "LR": "LR",
         "SVM": "SVM",
-        "decision_tree": "DT",
-        "lr": "LR",
-        "svm": "SVM",
-        "svm_linear": "SVM",
     }
 
     if "model_short" not in plot_df.columns:
@@ -1061,6 +1174,18 @@ def plot_figure5(concentration: pd.DataFrame):
     if not available_models:
         print("No recognized models in concentration table — skipping Figure 5.")
         return
+
+    # Use n_positive_importance if available; fall back to n_nonzero with a warning.
+    has_positive_col = "n_positive_importance" in plot_df.columns
+
+    if not has_positive_col:
+        import warnings
+        warnings.warn(
+            "n_positive_importance column not found in concentration table. "
+            "Falling back to n_nonzero for legend labels. "
+            "Re-run 01-cross_dataset_tables_hi.py to regenerate the table.",
+            UserWarning,
+        )
 
     fig, axes = plt.subplots(
         1,
@@ -1096,12 +1221,20 @@ def plot_figure5(concentration: pd.DataFrame):
                 for c in frac_cols
             ])
 
-            median_nonzero = sub_protocol["n_nonzero"].median()
-            mean_nonzero = sub_protocol["n_nonzero"].mean()
+            # Use n_positive_importance for legend (consistent with curves).
+            # Fall back to n_nonzero if column is missing.
+            if has_positive_col:
+                median_active = sub_protocol["n_positive_importance"].median()
+                mean_active = sub_protocol["n_positive_importance"].mean()
+                active_label = "positive-importance"
+            else:
+                median_active = sub_protocol["n_nonzero"].median()
+                mean_active = sub_protocol["n_nonzero"].mean()
+                active_label = "non-zero (incl. negatives)"
 
             label = (
                 f"{protocol} "
-                f"(median non-zero={median_nonzero:.0f}, mean={mean_nonzero:.0f})"
+                f"(median {active_label}={median_active:.0f}, mean={mean_active:.0f})"
             )
 
             ax.plot(
@@ -1174,8 +1307,9 @@ def plot_figure5(concentration: pd.DataFrame):
         0.5,
         -0.02,
         "Steeper curves indicate stronger concentration among top-ranked features. "
-        "Legend values report non-zero / positive-importance features. "
-        "DT uses permutation importance; LR/SVM use coefficient-based importance, so comparisons are within model family.",
+        "Curves use clipped (positive-only) importance; negative permutation importance values are set to zero. "
+        "DT uses permutation importance; LR/SVM use coefficient-based importance. "
+        "Comparisons are within model family only.",
         ha="center",
         va="top",
         fontsize=9,
@@ -1183,11 +1317,9 @@ def plot_figure5(concentration: pd.DataFrame):
 
     fname = FIG_DIR / "fig5_feature_importance_concentration_curves.png"
     fig.savefig(fname, dpi=300, bbox_inches="tight")
-
     print(f"Saved: {fname.name}")
-
     plt.show()
     plt.close(fig)
 
-plot_figure5(concentration)
 
+plot_figure5(concentration)

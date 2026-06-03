@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# 
 # Cross-dataset tables for Hi OOD-vs-Random-Shuffle analysis.
-# 
+#
 # Reads per-fold artifacts for the Hi datasets where the OOD inner holdout can
 # be reconstructed consistently from the Lo-Hi folds: DRD2, HIV and Sol.
-# 
+#
 # KDR-Hi is excluded from this specific protocol comparison because its outer
 # training folds are restricted to 500 molecules. Therefore, train_i cannot be
 # reconstructed as the union of the two remaining Hi subsets, and the OOD holdout
 # would not be apples-to-apples with random shuffle.
-# 
+#
 # Outputs are saved to:
 # results/results_ood_vs_random_shuffle/hi/cross_dataset/
-# 
-# 
+#
+#
 # Outputs (saved to results/results_ood_vs_random_shuffle/hi/cross_dataset/):
 #   - cross_dataset_protocol_per_fold.csv
 #   - cross_dataset_protocol_summary.csv
@@ -27,22 +26,17 @@
 #   - cross_dataset_feature_overlap.csv
 #   - cross_dataset_feature_concentration.csv
 
-# In[ ]:
-
-
 import json
 import warnings
-from itertools import combinations
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 
-# In[ ]:
-
-
-from pathlib import Path
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
 
 try:
     PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -67,9 +61,14 @@ FOLDS = [1, 2, 3]
 TOP_K_VALUES = [10, 20, 50, 100, 150, 200]
 
 
-# In[ ]:
+# ---------------------------------------------------------------------------
+# Experiment registry
+# ---------------------------------------------------------------------------
 
-
+# Decision Trees are registered for ecfp4 and maccs only.
+# rdkit_desc is intentionally omitted for DT because scaled continuous
+# descriptors make permutation importance less interpretable and DT on
+# raw descriptors is not a standard baseline in this benchmark.
 _EXPERIMENT_TEMPLATES = [
     # Decision Tree
     ("Decision Tree", "DT", "ecfp4", "ECFP4", "OOD holdout",
@@ -104,6 +103,8 @@ _EXPERIMENT_TEMPLATES = [
      "svm_linear_{dataset}_hi_random_shuffle_maccs"),
 ]
 
+# KDR is intentionally excluded: its outer training folds are restricted to
+# 500 molecules and cannot be reconstructed as train_i = F_a u F_b.
 DATASETS = ["drd2", "hiv", "sol"]
 EXCLUDED_DATASETS = ["kdr"]
 
@@ -119,10 +120,51 @@ ORDER_FP = {"ECFP4": 0, "MACCS": 1, "RDKit desc": 2}
 ORDER_PROTOCOL = {"OOD holdout": 0, "Random shuffle": 1}
 ORDER_DATASET = {"drd2": 0, "hiv": 1, "sol": 2, "kdr": 99}
 
+# MACCS keys have only 167 bits. Top-50 covers ~30% of the entire feature
+# space. The expected random overlap between two random subsets of size 50
+# drawn from 167 features is approximately 50/167 ≈ 30% (hypergeometric).
+# For ECFP4 (2048 bits) the same baseline is ~2.4%.
+# Overlap percentages must therefore be interpreted relative to this baseline
+# and should NOT be compared directly across fingerprint types.
+MACCS_N_BITS = 167
+ECFP4_N_BITS = 2048
+RDKIT_TOPO_N_BITS = 2048  # default RDKit topological FP
+
+
+def _random_overlap_baseline(n_features: int, k: int) -> float:
+    """
+    Expected overlap fraction between two random subsets of size k drawn
+    without replacement from n_features features (hypergeometric mean).
+
+    E[overlap] / k = k / n_features   (when k <= n_features)
+    """
+    if n_features <= 0 or k <= 0:
+        return float("nan")
+    return min(k, n_features) / n_features
+
+
+FP_N_BITS = {
+    "ECFP4": ECFP4_N_BITS,
+    "MACCS": MACCS_N_BITS,
+    "RDKit desc": None,   # variable; baseline not computed for descriptors
+}
+
+
 def _build_registry() -> pd.DataFrame:
-    """Build the full experiment registry across all datasets."""
+    """
+    Build the full experiment registry across all datasets.
+
+    KDR is excluded by construction (not in DATASETS). The guard below
+    is a safety check in case DATASETS is accidentally modified.
+    """
     rows = []
     for dataset in DATASETS:
+        # Safety: never include excluded datasets
+        if dataset in EXCLUDED_DATASETS:
+            raise ValueError(
+                f"Dataset '{dataset}' is in EXCLUDED_DATASETS and must not "
+                f"be added to DATASETS."
+            )
         dataset_dir = RESULTS_ROOT / dataset
         for (model, model_short, fp_type, fp_label, protocol,
              dir_template) in _EXPERIMENT_TEMPLATES:
@@ -141,12 +183,15 @@ def _build_registry() -> pd.DataFrame:
                 "exists": result_dir.exists(),
             })
     df = pd.DataFrame(rows)
+
+    # Hard guard: KDR must never appear in the registry.
     if "kdr" in df["dataset"].unique():
         raise ValueError(
             "KDR should not be included in the OOD-vs-random Hi protocol tables. "
             "KDR-Hi has 500-molecule outer training folds and cannot be reconstructed "
-            "as train_i = F_a ∪ F_b."
+            "as train_i = F_a u F_b."
         )
+
     n_found = df["exists"].sum()
     n_total = len(df)
     print(f"Registry: {n_found}/{n_total} experiment directories found.")
@@ -159,8 +204,9 @@ def _build_registry() -> pd.DataFrame:
     return df
 
 
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
 
 def _read_json(path: Path) -> dict:
     with open(path, "r") as f:
@@ -181,13 +227,20 @@ def _add_ordering_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# ## Protocol per-fold table
-
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Protocol per-fold table
+# ---------------------------------------------------------------------------
 
 def build_protocol_per_fold(registry: pd.DataFrame) -> pd.DataFrame:
-    """Load params_fold_i.json for every experiment and build per-fold table."""
+    """
+    Load params_fold_i.json for every experiment and build per-fold table.
+
+    inner_pr_auc is read from inner_selection_score. This field is only
+    meaningful as a PR-AUC proxy when the inner CV scoring was
+    average_precision. A warning is emitted for any fold where the stored
+    inner score is outside [0, 1], which would indicate a different metric
+    (e.g., neg_MAE) was used.
+    """
     rows = []
     for _, exp in registry[registry["exists"]].iterrows():
         for fold in FOLDS:
@@ -204,6 +257,16 @@ def build_protocol_per_fold(registry: pd.DataFrame) -> pd.DataFrame:
             inner_train = data.get("inner_train_score", np.nan)
             train_pr = train_m.get("pr_auc", np.nan)
             test_pr = test_m.get("pr_auc", np.nan)
+
+            # Validate that inner score is on the same [0,1] scale as PR-AUC.
+            # If not, inner_test_gap is meaningless.
+            if not np.isnan(inner) and not (0.0 <= inner <= 1.0):
+                warnings.warn(
+                    f"inner_selection_score={inner:.4f} is outside [0, 1] for "
+                    f"{exp['dataset']}/{exp['dir_name']} fold {fold}. "
+                    f"This suggests a non-PR-AUC inner scoring metric was used. "
+                    f"inner_test_gap will be unreliable for this row."
+                )
 
             rows.append({
                 "dataset": exp["dataset"],
@@ -222,6 +285,16 @@ def build_protocol_per_fold(registry: pd.DataFrame) -> pd.DataFrame:
             })
 
     df = pd.DataFrame(rows)
+
+    # Assert no duplicate (dataset, model, fingerprint, protocol, fold) rows.
+    dup_cols = ["dataset", "model", "fingerprint", "protocol", "fold"]
+    n_dup = df.duplicated(subset=dup_cols).sum()
+    if n_dup > 0:
+        raise ValueError(
+            f"build_protocol_per_fold: {n_dup} duplicated rows found. "
+            f"Each (dataset, model, fingerprint, protocol, fold) must be unique."
+        )
+
     df = _add_ordering_columns(df)
     df = df.sort_values(
         ["dataset_order", "model_order", "fingerprint_order",
@@ -230,10 +303,9 @@ def build_protocol_per_fold(registry: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# ## Protocol summary (mean ± std across folds)
-
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Protocol summary (mean ± std across folds)
+# ---------------------------------------------------------------------------
 
 def build_protocol_summary(per_fold: pd.DataFrame) -> pd.DataFrame:
     group_cols = ["dataset", "dataset_label", "model", "model_short",
@@ -261,10 +333,9 @@ def build_protocol_summary(per_fold: pd.DataFrame) -> pd.DataFrame:
     return agg
 
 
-# ## Protocol delta table
-
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Protocol delta table
+# ---------------------------------------------------------------------------
 
 def build_protocol_delta(summary: pd.DataFrame) -> pd.DataFrame:
     """
@@ -274,6 +345,9 @@ def build_protocol_delta(summary: pd.DataFrame) -> pd.DataFrame:
       delta_inner_optimism = inner_random - inner_OOD   (positive = random inflated)
       delta_test_benefit   = test_OOD   - test_random   (positive = OOD better)
       delta_gap            = gap_random - gap_OOD       (positive = random more optimistic)
+
+    Note: delta_gap = delta_inner_optimism + delta_test_benefit algebraically.
+    It is included for convenience but is not an independent quantity.
     """
     pivot = summary.pivot_table(
         index=["dataset", "dataset_label", "model", "model_short", "fingerprint"],
@@ -305,12 +379,16 @@ def build_protocol_delta(summary: pd.DataFrame) -> pd.DataFrame:
             "fingerprint": fingerprint,
             "inner_ood": inner_ood,
             "inner_random": inner_rnd,
+            # positive = random shuffle inflated inner validation score
             "delta_inner_optimism": inner_rnd - inner_ood,
             "test_ood": test_ood,
             "test_random": test_rnd,
+            # positive = OOD holdout produced better final test score
             "delta_test_benefit": test_ood - test_rnd,
             "gap_ood": gap_ood,
             "gap_random": gap_rnd,
+            # NOTE: delta_gap = delta_inner_optimism + delta_test_benefit
+            # It is not an independent quantity; included for convenience only.
             "delta_gap": gap_rnd - gap_ood,
             "train_gap_ood": train_gap_ood,
             "train_gap_random": train_gap_rnd,
@@ -324,10 +402,9 @@ def build_protocol_delta(summary: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# ## Complexity tables
-
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Complexity tables
+# ---------------------------------------------------------------------------
 
 def build_complexity_all(registry: pd.DataFrame) -> pd.DataFrame:
     """Load complexity_fold_i.json + params for all experiments."""
@@ -427,6 +504,8 @@ def build_complexity_summary(complexity_all: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Flatten MultiIndex columns produced by aggregation.
+    # Group columns appear as ("col", "") tuples; the empty string is filtered
+    # out by `if c`, producing clean names like "dataset" rather than "dataset_".
     flat_cols = []
     for col in agg.columns:
         if isinstance(col, tuple):
@@ -445,18 +524,32 @@ def build_complexity_summary(complexity_all: pd.DataFrame) -> pd.DataFrame:
     return agg
 
 
-# ## Feature importance tables
-
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Feature importance tables
+# ---------------------------------------------------------------------------
 
 def _unify_importance(fi: pd.DataFrame, model: str) -> pd.DataFrame:
     """
+    Unify feature importance columns across model families.
+
     Decision Tree:
-      primary = permutation_importance_mean, fallback tree_importance
+      primary = permutation_importance_mean (post-hoc, does not affect
+                model selection), fallback = tree_importance (impurity-based).
 
     Logistic Regression / Linear SVM:
-      primary = normalized_abs_importance, fallback abs_weight
+      primary = normalized_abs_importance, fallback = abs_weight.
+      These are coefficient-based and are only comparable within the same
+      model family and fingerprint type.
+
+    Notes
+    -----
+    - Permutation importance can be negative (shuffling improved the score).
+      Negative values are preserved in importance_value and used for ranking.
+      They are only clipped to zero in build_feature_concentration, where
+      cumulative positive importance is the quantity of interest.
+    - valid_importance is explicitly initialized to False before the
+      if/elif/else chain to avoid UnboundLocalError if the model string
+      does not match any known family.
     """
     fi = fi.copy()
 
@@ -500,6 +593,10 @@ def _unify_importance(fi: pd.DataFrame, model: str) -> pd.DataFrame:
     # Linear models: primary ranking = absolute coefficient weight
     # ------------------------------------------------------------
     else:
+        # Explicitly initialize to avoid UnboundLocalError if model string
+        # does not match any known family.
+        valid_importance = False
+
         if (
             "normalized_abs_importance" in fi.columns
             and fi["normalized_abs_importance"].notna().any()
@@ -569,7 +666,14 @@ def build_feature_importance_all(registry: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_feature_topk(fi_all: pd.DataFrame) -> pd.DataFrame:
-    """Extract top-k features per experiment × fold using unified rank."""
+    """
+    Extract top-k features per experiment x fold using unified rank.
+
+    If importance_rank is all NaN for a group (e.g., a model with no
+    importance data), head(k) returns the first k rows in arbitrary order.
+    Such groups are excluded from overlap and concentration analyses because
+    importance_value will be NaN.
+    """
     if len(fi_all) == 0:
         return pd.DataFrame()
 
@@ -590,7 +694,34 @@ def build_feature_topk(fi_all: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_feature_overlap(fi_topk: pd.DataFrame) -> pd.DataFrame:
-    """Compute top-k overlap between OOD and Random for matched experiments."""
+    """
+    Compute top-k overlap between OOD and Random for matched experiments.
+
+    Overlap is computed within the same (dataset, model, fingerprint, fold, top_k).
+    Feature importance is never compared across model families or fingerprint types.
+
+    Denominator convention
+    ----------------------
+    overlap_percent uses k (the requested top-k) as the denominator, not
+    effective_k = min(k, |ood_feats|, |rnd_feats|). This gives a consistent
+    "what fraction of the top-k list is shared" interpretation regardless of
+    model sparsity. effective_k is still saved for diagnostics.
+
+    Using effective_k as denominator would inflate overlap for sparse models
+    (e.g., a DT that uses only 30 features when k=50 would show 100% overlap
+    if all 30 OOD features appear in the random top-50, even though the random
+    protocol selected 20 additional features the OOD protocol did not).
+
+    Random baseline
+    ---------------
+    For fingerprints with a known number of bits (ECFP4: 2048, MACCS: 167),
+    the expected random overlap fraction is k / n_bits (hypergeometric mean).
+    This baseline is saved as random_baseline_percent. MACCS top-50 covers
+    ~30% of the feature space, so a 60% overlap is only ~2x the baseline.
+    For ECFP4 the same baseline is ~2.4%, so 60% overlap is ~25x the baseline.
+    Overlap percentages must be interpreted relative to this baseline and
+    must NOT be compared directly across fingerprint types.
+    """
     if len(fi_topk) == 0:
         return pd.DataFrame()
 
@@ -605,6 +736,7 @@ def build_feature_overlap(fi_topk: pd.DataFrame) -> pd.DataFrame:
         dataset = combo["dataset"]
         model = combo["model"]
         fp = combo["fingerprint"]
+        n_bits = FP_N_BITS.get(fp, None)
 
         for fold in FOLDS:
             for k in TOP_K_VALUES:
@@ -636,10 +768,22 @@ def build_feature_overlap(fi_topk: pd.DataFrame) -> pd.DataFrame:
                 n_overlap = len(ood_feats & rnd_feats)
                 effective_k = min(k, len(ood_feats), len(rnd_feats))
 
-                if effective_k == 0:
-                    continue
+                # Use k as denominator for a consistent "fraction of top-k
+                # list shared" interpretation. See docstring for rationale.
+                overlap_frac = n_overlap / k
 
-                overlap_frac = n_overlap / effective_k
+                # Random baseline: expected overlap / k under random sampling
+                if n_bits is not None:
+                    baseline_frac = _random_overlap_baseline(n_bits, k)
+                    baseline_pct = round(100 * baseline_frac, 2)
+                    # Overlap relative to random baseline (ratio)
+                    overlap_vs_baseline = (
+                        round(overlap_frac / baseline_frac, 3)
+                        if baseline_frac > 0 else float("nan")
+                    )
+                else:
+                    baseline_pct = float("nan")
+                    overlap_vs_baseline = float("nan")
 
                 rows.append({
                     "dataset": dataset,
@@ -649,7 +793,15 @@ def build_feature_overlap(fi_topk: pd.DataFrame) -> pd.DataFrame:
                     "top_k": k,
                     "effective_k": effective_k,
                     "n_overlap": n_overlap,
+                    # Primary metric: n_overlap / k
                     "overlap_percent": round(100 * overlap_frac, 2),
+                    # Diagnostic: n_overlap / effective_k (inflated for sparse models)
+                    "overlap_percent_effective_k": round(
+                        100 * n_overlap / effective_k, 2
+                    ) if effective_k > 0 else float("nan"),
+                    # Random baseline and ratio
+                    "random_baseline_percent": baseline_pct,
+                    "overlap_vs_random_baseline": overlap_vs_baseline,
                 })
 
     df = pd.DataFrame(rows)
@@ -682,10 +834,20 @@ def build_feature_concentration(fi_all: pd.DataFrame) -> pd.DataFrame:
     """
     Compute cumulative importance captured by top-k features.
 
-    Permutation importance can be negative. For concentration analysis we use
-    only non-negative importance values, clipping negative values to zero.
-    This makes cumulative fractions interpretable as "share of positive
-    importance captured by the top-k features".
+    Permutation importance can be negative (shuffling improved the score).
+    For concentration analysis we use only non-negative importance values,
+    clipping negative values to zero. This makes cumulative fractions
+    interpretable as "share of positive importance captured by the top-k
+    features."
+
+    Columns saved
+    -------------
+    n_nonzero            : features with raw importance != 0 (includes negatives)
+    n_positive_importance: features with clipped importance > 0 (excludes negatives)
+
+    The concentration curves use clipped (positive-only) importance.
+    n_nonzero and n_positive_importance will differ when permutation importance
+    has negative values. Use n_positive_importance when interpreting the curves.
     """
     if len(fi_all) == 0:
         return pd.DataFrame()
@@ -718,7 +880,9 @@ def build_feature_concentration(fi_all: pd.DataFrame) -> pd.DataFrame:
             "protocol": protocol,
             "fold": fold,
             "n_features": int(len(raw_imp)),
+            # raw non-zero count: includes negative permutation importance values
             "n_nonzero": int(np.sum(raw_imp != 0)),
+            # positive-only count: consistent with the concentration curves
             "n_positive_importance": int(np.sum(clipped_imp > 0)),
             "total_importance_raw": float(np.sum(raw_imp)),
             "total_importance_positive": total,
@@ -747,8 +911,9 @@ def build_feature_concentration(fi_all: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main():
     print(f"Project root: {PROJECT_ROOT}")
@@ -793,15 +958,13 @@ def main():
     if len(overlap) > 0:
         duplicate_cols = ["dataset", "model", "fingerprint", "fold", "top_k"]
         n_duplicates = overlap.duplicated(subset=duplicate_cols).sum()
-
         if n_duplicates > 0:
             raise ValueError(
                 f"Feature-overlap table contains {n_duplicates} duplicated rows. "
                 "This would bias fold-level standard deviations in the plots."
-                )
+            )
 
-    overlap.to_csv(OUTPUT_DIR / "cross_dataset_feature_overlap.csv", index=False)
-    print(f"  Saved: cross_dataset_feature_overlap.csv  ({len(overlap)} rows)")
+    # Save once only.
     overlap.to_csv(OUTPUT_DIR / "cross_dataset_feature_overlap.csv", index=False)
     print(f"  Saved: cross_dataset_feature_overlap.csv  ({len(overlap)} rows)")
 
@@ -825,15 +988,13 @@ def main():
     }
 
 
-# In[ ]:
-
+# ---------------------------------------------------------------------------
+# Run and validate
+# ---------------------------------------------------------------------------
 
 outputs = main()
 
-
-# In[ ]:
-
-
+# Validate KDR exclusion across all output tables.
 for name in ["per_fold", "summary", "delta", "complexity_all", "fi_all", "overlap", "concentration"]:
     df = outputs[name]
     if "dataset" in df.columns:
@@ -841,27 +1002,26 @@ for name in ["per_fold", "summary", "delta", "complexity_all", "fi_all", "overla
 
 print("OK: KDR excluded from all OOD-vs-random cross-dataset tables.")
 
+# Validate no duplicated overlap rows.
 overlap = outputs["overlap"]
-
 if len(overlap) > 0:
     duplicate_cols = ["dataset", "model", "fingerprint", "fold", "top_k"]
     assert not overlap.duplicated(subset=duplicate_cols).any(), (
         "Duplicated rows found in feature overlap table."
     )
 
-    expected_rows = (
-        len(DATASETS)
-        * 3   # DT, LR, SVM
-        * 1   # not fixed because fingerprints differ by model, checked below
-    )
-
 print("OK: feature overlap has no duplicated dataset/model/fingerprint/fold/top_k rows.")
 
+# Validate no duplicated per-fold rows.
+per_fold = outputs["per_fold"]
+if len(per_fold) > 0:
+    dup_cols = ["dataset", "model", "fingerprint", "protocol", "fold"]
+    assert not per_fold.duplicated(subset=dup_cols).any(), (
+        "Duplicated rows found in per-fold protocol table."
+    )
 
-# In[ ]:
-
+print("OK: per-fold protocol table has no duplicated rows.")
 
 outputs["summary"]
 outputs["delta"]
 outputs["fi_all"]
-
