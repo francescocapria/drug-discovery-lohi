@@ -1,12 +1,12 @@
 """
-Main training script
+Main training script 
 
 Usage example:
     python training/train_model.py --config configs/hi/drd2/knn/knn_ecfp4_drd2_hi.yaml
 
 This script:
 1. Loads the YAML config of the project
-2. Constructs the right model --> Maps model name --> sklearn estimator factory
+2. Construct the right model --> Maps model name --> sklearn estimator factory
 3. Runs the full nested CV pipeline
 4. Saves predictions + params to the folder results/
 """
@@ -33,18 +33,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Tanimoto kernel (for SVM on binary fingerprints)
-# ---------------------------------------------------------------------------
 
 def tanimoto_kernel(X, Y):
     """
-    Compute the Tanimoto (Jaccard) similarity kernel for binary fingerprints.
-
-    Two molecules with all-zero fingerprints give a 0/0 denominator: by
-    convention their similarity is set to 0 (no shared bits).
-
-    Raises ValueError if non-binary input is detected.
+    Two molecules with all-zero fingerprints give a 0/0 denominator: by convention their similarity is set to 0 (no shared bits, nothing in common to measure).
     """
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
@@ -60,20 +53,19 @@ def tanimoto_kernel(X, Y):
     Y_sq = (Y * Y).sum(axis=1).reshape(-1, 1)
     denom = X_sq + Y_sq.T - XY
 
+    # Avoid 0/0 for all-zero fingerprint pairs: define similarity = 0 there.
     K = np.divide(XY, denom, out=np.zeros_like(XY), where=denom > 0)
     return K
 
 
-# ---------------------------------------------------------------------------
 # Model registry
-# ---------------------------------------------------------------------------
 
 def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4"):
     """
-    Map the model section config to an sklearn estimator factory.
-
+    Map the model section config to an sklearn estimator factory 
+    
     Returns a callable that produces a fresh, unfitted estimator with
-    the fixed params already set.
+    the fixed params already set before.
     """
     name = model_selected["name"]
     fixed = model_selected.get("fixed", {})
@@ -93,20 +85,24 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     elif name == "svm":
         from sklearn.svm import SVC, SVR
 
+        # tanimoto kernel
         kernel_type = fixed.get("kernel")
-
+        
         if kernel_type == "tanimoto" and fp_type not in ["ecfp4", "maccs", "rdkit_topo"]:
             raise ValueError(
                 "Tanimoto kernel can only be used with binary fingerprints: "
                 "ecfp4, maccs, rdkit_topo."
-            )
+        )
 
         # Scaling: always for rdkit_desc, for Lo binary fingerprints
-        # except Tanimoto which must operate on unscaled binary fingerprints.
+        # except Tanimoto which must operate on unscaled binary fingerprints
         use_scaling = fp_type == "rdkit_desc" or (task == "lo" and kernel_type != "tanimoto")
 
         if kernel_type == "tanimoto":
             fixed = {k: v for k, v in fixed.items() if k != "kernel"}
+            kernel_arg = tanimoto_kernel
+        else:
+            kernel_arg = kernel_type
 
         SvmClass = SVR if task == "lo" else SVC
 
@@ -151,11 +147,13 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
 
         def _prepare_lr_fixed_params(params: dict) -> dict:
             """
-            Prepare LogisticRegression parameters.
+            Prepare LogisticRegression parameters for scikit-learn >= 1.8.
 
-            The 'penalty' key is translated to 'l1_ratio' for compatibility
-            with sklearn >= 1.8 where 'penalty' is deprecated. Verify that
-            the sklearn version in use actually requires this translation.
+            In sklearn 1.8, 'penalty' is deprecated. The penalty type is now
+            controlled through l1_ratio:
+                l1_ratio = 0.0  -> L2-like
+                l1_ratio = 1.0  -> L1-like
+                0 < l1_ratio < 1 -> ElasticNet
             """
             params = dict(params)
 
@@ -187,7 +185,7 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
             return model
 
         return factory
-
+    
     elif name == "linreg":
         from sklearn.linear_model import LinearRegression
         def factory():
@@ -196,7 +194,7 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
                 return Pipeline([("scaler", StandardScaler()), ("model", model)])
             return model
         return factory
-
+    
     elif name == "dt":
         if task == "lo":
             from sklearn.tree import DecisionTreeRegressor
@@ -236,13 +234,11 @@ def get_estimator_factory(model_selected: dict, task: str, fp_type: str = "ecfp4
     else:
         raise ValueError(
             f"Unknown model name: '{name}'. "
-            f"Available: knn, svm, gb, rf, lr, linreg, dt, dummy, xgb"
+            f"Available: knn, svm, gb, rf, lr, dt, dummy, xgb"
         )
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
@@ -268,8 +264,16 @@ def main():
 
     args = parser.parse_args()
 
+    # Load config (transform yaml file)
     cfg = load_config(args.config)
     config_name = Path(args.config).stem
+    
+    task = cfg["experiment"]["task"] 
+
+    if config_name.endswith(f"_{task}"):
+        model_name = config_name[:-(len(task) + 1)]
+    else:
+        model_name = config_name  
 
     fp_config = cfg["fingerprint"]
     if "types" in fp_config:
@@ -278,23 +282,22 @@ def main():
         fp_list = [fp_config["type"]]
     else:
         raise ValueError("Config must have fingerprint.type or fingerprint.types")
-
+    
+    # if --dry-run is used, it doesn't train nothing, only check the config. Useful for debug
     if args.dry_run:
         import json
         print(json.dumps(cfg, indent=2))
         return
 
-    # Run nested CV for each fingerprint type
+    # Run nested CV for each fingerprint
     for fp_type in fp_list:
         factory = get_estimator_factory(cfg["model"], cfg["experiment"]["task"], fp_type)
 
         param_grid = cfg["model"]["search"].copy()
-        # Check if the factory produces a Pipeline to prefix param names.
-        # Note: factory() is called once here for inspection only.
         if isinstance(factory(), Pipeline):
             param_grid = {f"model__{k}": v for k, v in param_grid.items()}
 
-        # model_name includes both the config file name and the fingerprint type
+        # model_name include sia il nome del file config che il fingerprint
         model_name = f"{config_name}_{fp_type}"
 
         results = run_nested_cv(
@@ -312,9 +315,10 @@ def main():
             folds=args.folds,
             inner_split_strategy=cfg["cv"]["inner_split_strategy"],
             holdout_val_fraction=cfg["cv"]["holdout_val_fraction"],
-            artifacts=cfg.get("artifacts", {}),
+            artifacts=cfg.get("artifacts", {})
         )
 
+        # Summary
         print("\n" + "=" * 60)
         print(f"EXPERIMENT COMPLETE: {results['experiment_id']}")
         print("=" * 60)
