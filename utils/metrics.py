@@ -31,9 +31,7 @@ from rdkit.ML.Scoring.Scoring import CalcBEDROC
 import warnings
 from scipy.stats import ConstantInputWarning
 
-# ---------------------------------------------------------------------------
 # Hi metrics (Hit Identification — binary classification)
-# ---------------------------------------------------------------------------
 
 def get_hi_metrics(
     y_true: np.ndarray,
@@ -85,9 +83,7 @@ def get_hi_metrics(
     }
 
 
-# ---------------------------------------------------------------------------
 # Lo metrics (Lead Optimization — ranking within clusters)
-# ---------------------------------------------------------------------------
 
 def get_lo_metrics(
     y_true: np.ndarray,
@@ -155,9 +151,7 @@ def get_lo_metrics(
     }
 
 
-# ---------------------------------------------------------------------------
 # Aggregation across outer folds
-# ---------------------------------------------------------------------------
 
 def aggregate_fold_metrics(
     fold_metrics: List[Dict[str, float]]

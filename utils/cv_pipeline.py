@@ -1,24 +1,41 @@
 """
 Nested cross-validation pipeline for the Lo-Hi benchmark.
 
-The pipeline uses the 3 predefined Lo-Hi outer folds. For each fold, models are
-selected only on train_i and evaluated once on the held-out test_i.
+The pipeline uses the three predefined Lo-Hi outer folds. For each outer fold, hyperparameters are selected using only the corresponding outer training set,
+and the final fitted model is evaluated once on the held-out outer test set. 
 
 Supported inner-selection strategies:
-- kfold: standard inner CV on train_i;
-- holdout: Hi-only OOD holdout, reconstructed from the Lo-Hi fold subsets;
-- random_shuffle: random inner holdout matched to the same train/validation
-  proportion as the corresponding OOD holdout.
+
+* kfold:
+  Standard inner cross-validation on the full outer training set. For Hi tasks, StratifiedKFold is used; for Lo tasks, KFold is used.
+
+* holdout:
+  Hi-only OOD-aware inner validation. The inner train and validation subsets are reconstructed from the original Lo-Hi fold subsets, so that one chemically
+  distinct subset is used for inner training and another chemically distinct subset is used for inner validation. This strategy is valid only when the two
+  reconstructed inner subsets exactly recover the full outer training fold.
+
+* random_shuffle:
+  In-distribution random inner holdout built from the same outer training molecules. The validation fraction is matched fold-by-fold to the
+  corresponding OOD holdout validation fraction, and the split is stratified when possible by both target label and original fold origin. This makes the
+  comparison with OOD holdout controlled for validation-set size and class/fold composition.
+
+For holdout and random_shuffle, model selection is implemented with PredefinedSplit. The validation subset is used only to choose hyperparameters.
+With refit=True, GridSearchCV/RandomizedSearchCV automatically refits the selected estimator on the concatenation of the inner training and validation
+subsets, corresponding to the full outer training set for that fold.
+
+KDR-Hi is excluded from the OOD-holdout versus random-shuffle protocol comparison because its outer training folds are artificially restricted to 500
+molecules and cannot be reconstructed as the union of the two non-test Lo-Hi subsets. Including it would break the matched-protocol comparison.
 
 Feature importance:
-- Decision Trees use permutation importance as the main feature ranking, computed
-  post-hoc on a held-out evaluation set, usually the outer test fold. The native
-  sklearn impurity importance is still saved only as a diagnostic.
-- Logistic Regression and Linear SVM keep the standard coefficient-based ranking
-  using absolute weights. No permutation importance is computed for them.
 
-Optional artifacts include fitted models, parameters, predictions, complexity
-metrics, feature-importance tables and CV/search results.
+* Decision Trees use permutation importance as the primary feature ranking, computed post-hoc on a held-out evaluation set, usually the outer test fold.
+  Native sklearn impurity-based importance is still saved only as a diagnostic.
+* Logistic Regression and Linear SVM use coefficient-based rankings, based on the absolute value of the learned weights. Signed coefficients are also saved
+  to preserve directionality.
+
+Optional artifacts include fitted models, selected parameters, predictions,
+complexity metrics, feature-importance tables and CV/search results.
+
 """
 
 import time
@@ -391,7 +408,7 @@ def _extract_feature_importance(
             df["tree_importance"].rank(ascending=False, method="first").astype(int)
         )
 
-        # --- Permutation importance (PRIMARY) ---
+        # Permutation importance (PRIMARY)
         perm_df = None
         if X_eval is not None and y_eval is not None:
             if perm_scoring is None:
@@ -838,7 +855,7 @@ def run_single_fold(
         val_frac = kwargs.get("random_val_fraction", None)
 
         if val_frac is None:
-            # Backward-compatible fallback for old configs.
+            # Backward-compatible fallback for old configs
             val_frac = kwargs.get("holdout_val_fraction", 0.2)
 
         random_stratify_labels = kwargs.get("random_stratify_labels", None)
@@ -941,9 +958,9 @@ def run_single_fold(
             n_features=X_train.shape[1],
         )
 
-    # Feature importance is computed ONLY when it will be saved, because the permutation-importance step is the expensive part.
+    # Feature importance is computed ONLY when it will be saved
     if want_feature_importance:
-        # Permutation-importance settings (overridable via config kwargs).
+        # Permutation-importance settings (overridable via config kwargs)
         perm_n_repeats = kwargs.get("perm_n_repeats", DEFAULT_PERM_N_REPEATS)
         perm_scoring = kwargs.get("perm_scoring", None)
         perm_n_jobs = kwargs.get("perm_n_jobs", DEFAULT_PERM_N_JOBS)
@@ -1157,7 +1174,7 @@ def run_nested_cv(
                     f"val_fraction={random_val_fraction:.4f}"
                 )
 
-        # ---- Execute this outer fold ----
+        # Execute this outer fold 
         result = run_single_fold(
             train_df=train_df,
             test_df=test_df,
@@ -1178,7 +1195,7 @@ def run_nested_cv(
         )
         fold_results.append(result)
 
-    # ---- Aggregate test metrics across folds ----
+    # Aggregate test metrics across folds 
     test_metrics_list = [r["test_metrics"] for r in fold_results]
     aggregated = aggregate_fold_metrics(test_metrics_list)
 
@@ -1188,7 +1205,7 @@ def run_nested_cv(
         logger.info(f"  {k}: {v}")
     logger.info(f"{'='*60}")
 
-    # ---- Check hyperparameter stability across folds ----
+    # Check hyperparameter stability across folds
     all_params = [r["best_params"] for r in fold_results]
     if len(set(str(p) for p in all_params)) > 1:
         logger.info("NOTE: Best hyperparameters differ across folds (expected in proper nested CV)")

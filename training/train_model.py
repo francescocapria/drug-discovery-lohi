@@ -51,7 +51,7 @@ def tanimoto_kernel(X, Y):
     XY = X @ Y.T
     X_sq = (X * X).sum(axis=1).reshape(-1, 1)
     Y_sq = (Y * Y).sum(axis=1).reshape(-1, 1)
-    denom = X_sq + Y_sq.T - XY
+    denom = X_sq + Y_sq.T - XY 
 
     # Avoid 0/0 for all-zero fingerprint pairs: define similarity = 0 there.
     K = np.divide(XY, denom, out=np.zeros_like(XY), where=denom > 0)
