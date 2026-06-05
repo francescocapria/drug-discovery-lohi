@@ -71,7 +71,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from utils.fingerprints import compute_fingerprints
 
-
 # %%
 # Global settings
 
@@ -114,11 +113,7 @@ RANDOM_STATE = 42
 
 DATA_ROOT = PROJECT_ROOT / "data" / TASK
 OOD_CROSS_DIR = (
-    PROJECT_ROOT
-    / "results"
-    / "results_ood_vs_random_shuffle"
-    / TASK
-    / "cross_dataset"
+    PROJECT_ROOT / "results" / "results_ood_vs_random_shuffle" / TASK / "cross_dataset"
 )
 
 OUT_ROOT = PROJECT_ROOT / "results" / "results_fold_distance" / TASK
@@ -166,6 +161,7 @@ IMPORTANCE_COL_CANDIDATES = [
 # %%
 # Utilities
 
+
 def stable_seed(*parts):
     text = "|".join(str(p) for p in parts)
     return zlib.crc32(text.encode("utf-8")) & 0xFFFFFFFF
@@ -186,7 +182,9 @@ def get_smiles_col(df):
         if col in df.columns:
             return col
 
-    raise ValueError(f"No SMILES column found. Available columns: {df.columns.tolist()}")
+    raise ValueError(
+        f"No SMILES column found. Available columns: {df.columns.tolist()}"
+    )
 
 
 def find_importance_col(df):
@@ -228,6 +226,7 @@ def protocol_match(series, protocol):
 
 # %%
 # Load data
+
 
 def load_subset_fps(dataset):
     """
@@ -287,7 +286,9 @@ def load_subset_fps(dataset):
         )
 
         if n_invalid > 0:
-            print(f"    Removed {n_invalid} invalid SMILES from {dataset}/{subset_name}")
+            print(
+                f"    Removed {n_invalid} invalid SMILES from {dataset}/{subset_name}"
+            )
 
         df = df.loc[valid_mask].reset_index(drop=True)
         out[subset_name] = (X.astype(np.uint8), df)
@@ -302,6 +303,7 @@ def load_subset_fps(dataset):
 # %%
 # Tanimoto
 
+
 def nn_max_sim(X, Y, chunk=512):
     """
     For each molecule in X, compute max Tanimoto similarity to any molecule in Y.
@@ -312,7 +314,7 @@ def nn_max_sim(X, Y, chunk=512):
     out = np.empty(X.shape[0], dtype=np.float32)
 
     for start in range(0, X.shape[0], chunk):
-        xb = X[start:start + chunk].astype(np.float32, copy=False)
+        xb = X[start : start + chunk].astype(np.float32, copy=False)
 
         inter = xb @ Y.T
         union = xb.sum(axis=1)[:, None] + y_sum[None, :] - inter
@@ -324,7 +326,7 @@ def nn_max_sim(X, Y, chunk=512):
             where=union > 0,
         )
 
-        out[start:start + chunk] = sim.max(axis=1)
+        out[start : start + chunk] = sim.max(axis=1)
 
     return out
 
@@ -385,6 +387,7 @@ def random_pair_distance(XA, XB, n_pairs, dataset, pair, space, repeat=np.nan):
 # %%
 # List A
 
+
 def load_list_a():
     """
     Load activity-model feature importance table from OOD-vs-random analysis.
@@ -402,7 +405,9 @@ def load_list_a():
 
     for col in ["model", "fingerprint", "feature_idx"]:
         if col not in df.columns:
-            raise ValueError(f"List A has no '{col}' column. Columns: {df.columns.tolist()}")
+            raise ValueError(
+                f"List A has no '{col}' column. Columns: {df.columns.tolist()}"
+            )
 
     importance_col = find_importance_col(df)
 
@@ -411,12 +416,7 @@ def load_list_a():
 
     df = df[df["fingerprint"] == FP_TYPE].copy()
 
-    df["abs_importance"] = (
-        df[importance_col]
-        .fillna(0.0)
-        .astype(float)
-        .abs()
-    )
+    df["abs_importance"] = df[importance_col].fillna(0.0).astype(float).abs()
 
     df["feature_idx"] = df["feature_idx"].astype(int)
 
@@ -432,18 +432,21 @@ def load_list_a():
         print("\nList A protocol counts:")
         print(df["protocol"].value_counts(dropna=False))
     else:
-        print("\nWARNING: List A has no protocol column. Protocol-specific top-k bits will be skipped.")
+        print(
+            "\nWARNING: List A has no protocol column. Protocol-specific top-k bits will be skipped."
+        )
 
     if "fold" in df.columns:
         print("\nList A fold counts:")
         print(df["fold"].value_counts(dropna=False).sort_index())
     else:
-        print("\nWARNING: List A has no fold column. Fold-aware top-k bits will be skipped.")
+        print(
+            "\nWARNING: List A has no fold column. Fold-aware top-k bits will be skipped."
+        )
 
     print("\nList A rows by dataset/model:")
     print(
-        df
-        .groupby(["dataset", "model"])
+        df.groupby(["dataset", "model"])
         .size()
         .reset_index(name="n_rows")
         .sort_values(["dataset", "model"])
@@ -560,9 +563,9 @@ def random_topk_bits(dataset, pair, k, repeat):
     return rng.choice(EXPECTED_ECFP4_BITS, size=k, replace=False).astype(int)
 
 
-
 # %%
 # Restricted spaces and optional Wasserstein
+
 
 def restrict_to_bits(X, bits):
     Xr = X[:, bits]
@@ -590,7 +593,9 @@ def wasserstein_nd_optional(XA, XB, n, dataset, pair, space):
         XB = XB[rng.choice(XB.shape[0], size=n, replace=False)]
 
     try:
-        return float(wasserstein_distance_nd(XA.astype(np.float64), XB.astype(np.float64)))
+        return float(
+            wasserstein_distance_nd(XA.astype(np.float64), XB.astype(np.float64))
+        )
     except Exception as exc:
         warnings.warn(f"Wasserstein failed for {dataset}|{pair}|{space}: {exc}")
         return np.nan
@@ -599,7 +604,23 @@ def wasserstein_nd_optional(XA, XB, n, dataset, pair, space):
 # %%
 # Distance computation
 
-def add_distance_row(rows, hist_rows, dataset, pair, space, k, model, bit_source, activity_protocol, activity_fold, XA, XB, bits_used=None, bit_repeat=np.nan):
+
+def add_distance_row(
+    rows,
+    hist_rows,
+    dataset,
+    pair,
+    space,
+    k,
+    model,
+    bit_source,
+    activity_protocol,
+    activity_fold,
+    XA,
+    XB,
+    bits_used=None,
+    bit_repeat=np.nan,
+):
     t0 = time.time()
 
     pooled, sym, d_ab, d_ba = nn_distances(XA, XB)
@@ -616,43 +637,51 @@ def add_distance_row(rows, hist_rows, dataset, pair, space, k, model, bit_source
 
     wdist = wasserstein_nd_optional(XA, XB, W_SUBSAMPLE, dataset, pair, space)
 
-    rows.append({
-        "dataset": dataset,
-        "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
-        "pair": pair,
-        "space": space,
-        "k": int(k),
-        "model": model,
-        "bit_source": bit_source,
-        "activity_protocol": activity_protocol,
-        "activity_fold": activity_fold,
-        "bit_repeat": bit_repeat,
-        "bits_used": json.dumps([] if bits_used is None else [int(b) for b in bits_used]),
-        "nn_sym_distance": float(sym),
-        "nn_A_to_B_mean": float(d_ab.mean()),
-        "nn_B_to_A_mean": float(d_ba.mean()),
-        "random_pair_distance": rp_mean,
-        "wasserstein_nd": wdist,
-        "valid_molecule_fraction": 1.0,
-        "valid_random_pair_fraction": rp_valid_frac,
-        "n_valid_molecules": int(XA.shape[0] + XB.shape[0]),
-        "n_total_molecules": int(XA.shape[0] + XB.shape[0]),
-        "n_valid_random_pairs": rp_valid_n,
-        "n_random_pairs": rp_total_n,
-    })
+    rows.append(
+        {
+            "dataset": dataset,
+            "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
+            "pair": pair,
+            "space": space,
+            "k": int(k),
+            "model": model,
+            "bit_source": bit_source,
+            "activity_protocol": activity_protocol,
+            "activity_fold": activity_fold,
+            "bit_repeat": bit_repeat,
+            "bits_used": json.dumps(
+                [] if bits_used is None else [int(b) for b in bits_used]
+            ),
+            "nn_sym_distance": float(sym),
+            "nn_A_to_B_mean": float(d_ab.mean()),
+            "nn_B_to_A_mean": float(d_ba.mean()),
+            "random_pair_distance": rp_mean,
+            "wasserstein_nd": wdist,
+            "valid_molecule_fraction": 1.0,
+            "valid_random_pair_fraction": rp_valid_frac,
+            "n_valid_molecules": int(XA.shape[0] + XB.shape[0]),
+            "n_total_molecules": int(XA.shape[0] + XB.shape[0]),
+            "n_valid_random_pairs": rp_valid_n,
+            "n_random_pairs": rp_total_n,
+        }
+    )
 
-    hist_rows.append(pd.DataFrame({
-        "dataset": dataset,
-        "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
-        "pair": pair,
-        "space": space,
-        "k": int(k),
-        "model": model,
-        "bit_source": bit_source,
-        "activity_protocol": activity_protocol,
-        "activity_fold": activity_fold,
-        "distance": pooled,
-    }))
+    hist_rows.append(
+        pd.DataFrame(
+            {
+                "dataset": dataset,
+                "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
+                "pair": pair,
+                "space": space,
+                "k": int(k),
+                "model": model,
+                "bit_source": bit_source,
+                "activity_protocol": activity_protocol,
+                "activity_fold": activity_fold,
+                "distance": pooled,
+            }
+        )
+    )
 
     print(
         f"    {space:<20} XA={str(XA.shape):>14}, XB={str(XB.shape):>14}, "
@@ -661,7 +690,23 @@ def add_distance_row(rows, hist_rows, dataset, pair, space, k, model, bit_source
     )
 
 
-def add_restricted_distance_row(rows, hist_rows, dataset, pair, space, k, model, bit_source, activity_protocol, activity_fold, XA, XB, bits, bit_repeat=np.nan, save_hist=True):
+def add_restricted_distance_row(
+    rows,
+    hist_rows,
+    dataset,
+    pair,
+    space,
+    k,
+    model,
+    bit_source,
+    activity_protocol,
+    activity_fold,
+    XA,
+    XB,
+    bits,
+    bit_repeat=np.nan,
+    save_hist=True,
+):
     t0 = time.time()
 
     Ar, valid_A = restrict_to_bits(XA, bits)
@@ -682,30 +727,32 @@ def add_restricted_distance_row(rows, hist_rows, dataset, pair, space, k, model,
     )
 
     if valid_A.sum() < 2 or valid_B.sum() < 2:
-        rows.append({
-            "dataset": dataset,
-            "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
-            "pair": pair,
-            "space": space,
-            "k": int(k),
-            "model": model,
-            "bit_source": bit_source,
-            "activity_protocol": activity_protocol,
-            "activity_fold": activity_fold,
-            "bit_repeat": bit_repeat,
-            "bits_used": json.dumps([int(b) for b in bits]),
-            "nn_sym_distance": np.nan,
-            "nn_A_to_B_mean": np.nan,
-            "nn_B_to_A_mean": np.nan,
-            "random_pair_distance": rp_mean,
-            "wasserstein_nd": np.nan,
-            "valid_molecule_fraction": float(valid_molecule_fraction),
-            "valid_random_pair_fraction": float(rp_valid_frac),
-            "n_valid_molecules": n_valid_molecules,
-            "n_total_molecules": n_total_molecules,
-            "n_valid_random_pairs": rp_valid_n,
-            "n_random_pairs": rp_total_n,
-        })
+        rows.append(
+            {
+                "dataset": dataset,
+                "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
+                "pair": pair,
+                "space": space,
+                "k": int(k),
+                "model": model,
+                "bit_source": bit_source,
+                "activity_protocol": activity_protocol,
+                "activity_fold": activity_fold,
+                "bit_repeat": bit_repeat,
+                "bits_used": json.dumps([int(b) for b in bits]),
+                "nn_sym_distance": np.nan,
+                "nn_A_to_B_mean": np.nan,
+                "nn_B_to_A_mean": np.nan,
+                "random_pair_distance": rp_mean,
+                "wasserstein_nd": np.nan,
+                "valid_molecule_fraction": float(valid_molecule_fraction),
+                "valid_random_pair_fraction": float(rp_valid_frac),
+                "n_valid_molecules": n_valid_molecules,
+                "n_total_molecules": n_total_molecules,
+                "n_valid_random_pairs": rp_valid_n,
+                "n_random_pairs": rp_total_n,
+            }
+        )
 
         print(
             f"    {space:<20} skipped NN: valid_A={valid_A.sum()}, valid_B={valid_B.sum()}, "
@@ -718,35 +765,12 @@ def add_restricted_distance_row(rows, hist_rows, dataset, pair, space, k, model,
     Br_valid = Br[valid_B]
 
     pooled, sym, d_ab, d_ba = nn_distances(Ar_valid, Br_valid)
-    wdist = wasserstein_nd_optional(Ar_valid, Br_valid, W_SUBSAMPLE, dataset, pair, space)
+    wdist = wasserstein_nd_optional(
+        Ar_valid, Br_valid, W_SUBSAMPLE, dataset, pair, space
+    )
 
-    rows.append({
-        "dataset": dataset,
-        "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
-        "pair": pair,
-        "space": space,
-        "k": int(k),
-        "model": model,
-        "bit_source": bit_source,
-        "activity_protocol": activity_protocol,
-        "activity_fold": activity_fold,
-        "bit_repeat": bit_repeat,
-        "bits_used": json.dumps([int(b) for b in bits]),
-        "nn_sym_distance": float(sym),
-        "nn_A_to_B_mean": float(d_ab.mean()),
-        "nn_B_to_A_mean": float(d_ba.mean()),
-        "random_pair_distance": rp_mean,
-        "wasserstein_nd": wdist,
-        "valid_molecule_fraction": float(valid_molecule_fraction),
-        "valid_random_pair_fraction": float(rp_valid_frac),
-        "n_valid_molecules": n_valid_molecules,
-        "n_total_molecules": n_total_molecules,
-        "n_valid_random_pairs": rp_valid_n,
-        "n_random_pairs": rp_total_n,
-    })
-
-    if save_hist:
-        hist_rows.append(pd.DataFrame({
+    rows.append(
+        {
             "dataset": dataset,
             "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
             "pair": pair,
@@ -756,8 +780,39 @@ def add_restricted_distance_row(rows, hist_rows, dataset, pair, space, k, model,
             "bit_source": bit_source,
             "activity_protocol": activity_protocol,
             "activity_fold": activity_fold,
-            "distance": pooled,
-        }))
+            "bit_repeat": bit_repeat,
+            "bits_used": json.dumps([int(b) for b in bits]),
+            "nn_sym_distance": float(sym),
+            "nn_A_to_B_mean": float(d_ab.mean()),
+            "nn_B_to_A_mean": float(d_ba.mean()),
+            "random_pair_distance": rp_mean,
+            "wasserstein_nd": wdist,
+            "valid_molecule_fraction": float(valid_molecule_fraction),
+            "valid_random_pair_fraction": float(rp_valid_frac),
+            "n_valid_molecules": n_valid_molecules,
+            "n_total_molecules": n_total_molecules,
+            "n_valid_random_pairs": rp_valid_n,
+            "n_random_pairs": rp_total_n,
+        }
+    )
+
+    if save_hist:
+        hist_rows.append(
+            pd.DataFrame(
+                {
+                    "dataset": dataset,
+                    "dataset_label": DATASET_LABELS.get(dataset, dataset.upper()),
+                    "pair": pair,
+                    "space": space,
+                    "k": int(k),
+                    "model": model,
+                    "bit_source": bit_source,
+                    "activity_protocol": activity_protocol,
+                    "activity_fold": activity_fold,
+                    "distance": pooled,
+                }
+            )
+        )
 
     print(
         f"    {space:<20} XA_valid={str(Ar_valid.shape):>14}, XB_valid={str(Br_valid.shape):>14}, "
@@ -821,7 +876,9 @@ def compute_dataset_distances(dataset, fps, list_a, best_model):
 
             if global_bits is None or len(global_bits) == 0:
                 debug_counts["global_missing"] += 1
-                print(f"    WARNING: no GLOBAL top-{k} bits for {dataset} | {best_model} | {pair}")
+                print(
+                    f"    WARNING: no GLOBAL top-{k} bits for {dataset} | {best_model} | {pair}"
+                )
             else:
                 debug_counts["global_found"] += 1
 
@@ -940,18 +997,21 @@ def compute_dataset_distances(dataset, fps, list_a, best_model):
 # %%
 # Figures
 
+
 def set_plot_style():
-    mpl.rcParams.update({
-        "font.family": "DejaVu Sans",
-        "font.size": 9,
-        "axes.titlesize": 11,
-        "axes.labelsize": 9,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 8,
-        "figure.dpi": 150,
-        "savefig.dpi": 600,
-        "axes.linewidth": 0.8,
-    })
+    mpl.rcParams.update(
+        {
+            "font.family": "DejaVu Sans",
+            "font.size": 9,
+            "axes.titlesize": 11,
+            "axes.labelsize": 9,
+            "xtick.labelsize": 8,
+            "ytick.labelsize": 8,
+            "figure.dpi": 150,
+            "savefig.dpi": 600,
+            "axes.linewidth": 0.8,
+        }
+    )
 
 
 def fig_distance_histograms(hist_all, k_show=50, source_prefix="global"):
@@ -992,13 +1052,11 @@ def fig_distance_histograms(hist_all, k_show=50, source_prefix="global"):
 
     for ax, dataset in zip(axes, DATASETS):
         full = hist_all[
-            (hist_all["dataset"] == dataset)
-            & (hist_all["space"] == "full")
+            (hist_all["dataset"] == dataset) & (hist_all["space"] == "full")
         ]["distance"]
 
         restricted = hist_all[
-            (hist_all["dataset"] == dataset)
-            & (hist_all["space"] == restricted_space)
+            (hist_all["dataset"] == dataset) & (hist_all["space"] == restricted_space)
         ]["distance"]
 
         for data, key, label in [
@@ -1036,7 +1094,9 @@ def fig_distance_histograms(hist_all, k_show=50, source_prefix="global"):
                 alpha=0.9,
             )
 
-        ax.set_title(DATASET_LABELS.get(dataset, dataset.upper()), fontweight="bold", pad=6)
+        ax.set_title(
+            DATASET_LABELS.get(dataset, dataset.upper()), fontweight="bold", pad=6
+        )
         ax.set_xlabel("Nearest-neighbour Tanimoto distance")
         ax.set_xlim(0, 1)
         ax.spines["top"].set_visible(False)
@@ -1096,13 +1156,9 @@ def fig_distance_vs_k(dist_all, source_prefix="global"):
 
         for k in K_VALUES:
             space = space_builder(k)
-            val = (
-                dist_all[
-                    (dist_all["dataset"] == dataset)
-                    & (dist_all["space"] == space)
-                ]["nn_sym_distance"]
-                .mean()
-            )
+            val = dist_all[
+                (dist_all["dataset"] == dataset) & (dist_all["space"] == space)
+            ]["nn_sym_distance"].mean()
             vals.append(val)
 
         ax.plot(
@@ -1115,13 +1171,9 @@ def fig_distance_vs_k(dist_all, source_prefix="global"):
             label=DATASET_LABELS.get(dataset, dataset.upper()),
         )
 
-        full = (
-            dist_all[
-                (dist_all["dataset"] == dataset)
-                & (dist_all["space"] == "full")
-            ]["nn_sym_distance"]
-            .mean()
-        )
+        full = dist_all[
+            (dist_all["dataset"] == dataset) & (dist_all["space"] == "full")
+        ]["nn_sym_distance"].mean()
 
         ax.axhline(
             full,
@@ -1180,18 +1232,17 @@ def fig_protocol_vs_k(dist_all):
         axes = [axes]
 
     for ax, dataset in zip(axes, DATASETS):
-        for protocol_short, label in [("ood", "OOD activity bits"), ("random", "Random activity bits")]:
+        for protocol_short, label in [
+            ("ood", "OOD activity bits"),
+            ("random", "Random activity bits"),
+        ]:
             vals = []
 
             for k in K_VALUES:
                 space = f"{protocol_short}_top{k}"
-                val = (
-                    dist_all[
-                        (dist_all["dataset"] == dataset)
-                        & (dist_all["space"] == space)
-                    ]["nn_sym_distance"]
-                    .mean()
-                )
+                val = dist_all[
+                    (dist_all["dataset"] == dataset) & (dist_all["space"] == space)
+                ]["nn_sym_distance"].mean()
                 vals.append(val)
 
             ax.plot(
@@ -1204,13 +1255,9 @@ def fig_protocol_vs_k(dist_all):
                 label=label,
             )
 
-        full = (
-            dist_all[
-                (dist_all["dataset"] == dataset)
-                & (dist_all["space"] == "full")
-            ]["nn_sym_distance"]
-            .mean()
-        )
+        full = dist_all[
+            (dist_all["dataset"] == dataset) & (dist_all["space"] == "full")
+        ]["nn_sym_distance"].mean()
 
         ax.axhline(full, color="black", linestyle="--", linewidth=1.0, alpha=0.55)
 
@@ -1235,7 +1282,9 @@ def fig_protocol_vs_k(dist_all):
     fig.tight_layout()
 
     for ext in ["png", "pdf"]:
-        fig.savefig(FIG_ROOT / f"fold_nn_distance_protocol_vs_k.{ext}", bbox_inches="tight")
+        fig.savefig(
+            FIG_ROOT / f"fold_nn_distance_protocol_vs_k.{ext}", bbox_inches="tight"
+        )
 
     plt.show()
     plt.close(fig)
@@ -1272,11 +1321,9 @@ def fig_delta_heatmap(dist_all, k_show=50, source_prefix="global"):
         merged["restricted_distance"] - merged["full_distance"]
     )
 
-    mat = (
-        merged
-        .pivot(index="dataset", columns="pair", values="delta_restricted_minus_full")
-        .reindex(DATASETS)
-    )
+    mat = merged.pivot(
+        index="dataset", columns="pair", values="delta_restricted_minus_full"
+    ).reindex(DATASETS)
 
     ordered_cols = ["F1_vs_F2", "F1_vs_F3", "F2_vs_F3"]
     mat = mat[[c for c in ordered_cols if c in mat.columns]]
@@ -1336,7 +1383,9 @@ def fig_delta_heatmap(dist_all, k_show=50, source_prefix="global"):
     fig.tight_layout()
 
     for ext in ["png", "pdf"]:
-        fig.savefig(FIG_ROOT / f"fold_distance_delta_{file_suffix}.{ext}", bbox_inches="tight")
+        fig.savefig(
+            FIG_ROOT / f"fold_distance_delta_{file_suffix}.{ext}", bbox_inches="tight"
+        )
 
     plt.show()
     plt.close(fig)
@@ -1368,12 +1417,13 @@ def fig_activity_vs_random_bits(dist_all, k_show=50):
         null_space = f"random_bits_top{k_show}"
 
         null = dist_all[
-            (dist_all["dataset"] == dataset)
-            & (dist_all["space"] == null_space)
+            (dist_all["dataset"] == dataset) & (dist_all["space"] == null_space)
         ]["nn_sym_distance"].dropna()
 
         if len(null) == 0:
-            ax.set_title(f"{DATASET_LABELS.get(dataset, dataset.upper())}\n(no random baseline)")
+            ax.set_title(
+                f"{DATASET_LABELS.get(dataset, dataset.upper())}\n(no random baseline)"
+            )
             continue
 
         jitter_rng = local_rng(dataset, "plot", k_show)
@@ -1408,8 +1458,7 @@ def fig_activity_vs_random_bits(dist_all, k_show=50):
             space = f"{prefix}{k_show}"
 
             vals = dist_all[
-                (dist_all["dataset"] == dataset)
-                & (dist_all["space"] == space)
+                (dist_all["dataset"] == dataset) & (dist_all["space"] == space)
             ]["nn_sym_distance"].dropna()
 
             if len(vals) == 0:
@@ -1510,8 +1559,7 @@ def fig_valid_fraction_vs_k(dist_all):
                 space = f"{prefix}{k}"
 
                 sub = dist_all[
-                    (dist_all["dataset"] == dataset)
-                    & (dist_all["space"] == space)
+                    (dist_all["dataset"] == dataset) & (dist_all["space"] == space)
                 ]
 
                 vals.append(sub["valid_molecule_fraction"].mean())
@@ -1549,7 +1597,9 @@ def fig_valid_fraction_vs_k(dist_all):
     fig.tight_layout()
 
     for ext in ["png", "pdf"]:
-        fig.savefig(FIG_ROOT / f"valid_molecule_fraction_vs_k.{ext}", bbox_inches="tight")
+        fig.savefig(
+            FIG_ROOT / f"valid_molecule_fraction_vs_k.{ext}", bbox_inches="tight"
+        )
 
     plt.show()
     plt.close(fig)
@@ -1557,6 +1607,7 @@ def fig_valid_fraction_vs_k(dist_all):
 
 # %%
 # Diagnostics and paper summary
+
 
 def print_output_diagnostics(dist_all, hist_all):
     print_section("Output diagnostics")
@@ -1566,8 +1617,7 @@ def print_output_diagnostics(dist_all, hist_all):
 
     print("\nDistance rows by dataset/space:")
     print(
-        dist_all
-        .groupby(["dataset", "space"])
+        dist_all.groupby(["dataset", "space"])
         .size()
         .reset_index(name="n_rows")
         .sort_values(["dataset", "space"])
@@ -1576,8 +1626,7 @@ def print_output_diagnostics(dist_all, hist_all):
 
     print("\nHistogram rows by dataset/space:")
     print(
-        hist_all
-        .groupby(["dataset", "space"])
+        hist_all.groupby(["dataset", "space"])
         .size()
         .reset_index(name="n_rows")
         .sort_values(["dataset", "space"])
@@ -1586,10 +1635,7 @@ def print_output_diagnostics(dist_all, hist_all):
 
     expected_activity_rows = len(DATASETS) * len(PAIRS) * (1 + 3 * len(K_VALUES))
     expected_random_bit_rows = (
-        len(DATASETS)
-        * len(PAIRS)
-        * len(K_VALUES)
-        * N_RANDOM_BIT_REPEATS
+        len(DATASETS) * len(PAIRS) * len(K_VALUES) * N_RANDOM_BIT_REPEATS
     )
     expected_total_rows = expected_activity_rows + expected_random_bit_rows
     actual_rows = len(dist_all)
@@ -1627,8 +1673,7 @@ def build_paper_summary(dist_all):
     for dataset in DATASETS:
         for k in [50, 100]:
             full_mean = dist_all[
-                (dist_all["dataset"] == dataset)
-                & (dist_all["space"] == "full")
+                (dist_all["dataset"] == dataset) & (dist_all["space"] == "full")
             ]["nn_sym_distance"].mean()
 
             null = dist_all[
@@ -1642,28 +1687,29 @@ def build_paper_summary(dist_all):
 
             for space in [f"global_top{k}", f"ood_top{k}", f"random_top{k}"]:
                 sub = dist_all[
-                    (dist_all["dataset"] == dataset)
-                    & (dist_all["space"] == space)
+                    (dist_all["dataset"] == dataset) & (dist_all["space"] == space)
                 ]
 
                 activity_mean = sub["nn_sym_distance"].mean()
                 valid_mol = sub["valid_molecule_fraction"].mean()
                 valid_pair = sub["valid_random_pair_fraction"].mean()
 
-                summary_rows.append({
-                    "dataset": dataset,
-                    "k": k,
-                    "space": space,
-                    "full_distance_mean": full_mean,
-                    "activity_distance_mean": activity_mean,
-                    "delta_activity_minus_full": activity_mean - full_mean,
-                    "random_bits_distance_mean": null_mean,
-                    "random_bits_q05": null_q05,
-                    "random_bits_q95": null_q95,
-                    "delta_activity_minus_random_bits": activity_mean - null_mean,
-                    "valid_molecule_fraction_mean": valid_mol,
-                    "valid_random_pair_fraction_mean": valid_pair,
-                })
+                summary_rows.append(
+                    {
+                        "dataset": dataset,
+                        "k": k,
+                        "space": space,
+                        "full_distance_mean": full_mean,
+                        "activity_distance_mean": activity_mean,
+                        "delta_activity_minus_full": activity_mean - full_mean,
+                        "random_bits_distance_mean": null_mean,
+                        "random_bits_q05": null_q05,
+                        "random_bits_q95": null_q95,
+                        "delta_activity_minus_random_bits": activity_mean - null_mean,
+                        "valid_molecule_fraction_mean": valid_mol,
+                        "valid_random_pair_fraction_mean": valid_pair,
+                    }
+                )
 
     paper_summary = pd.DataFrame(summary_rows)
 
@@ -1679,6 +1725,7 @@ def build_paper_summary(dist_all):
 
 # %%
 # Main
+
 
 def main():
     total_t0 = time.time()
