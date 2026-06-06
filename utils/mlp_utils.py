@@ -15,10 +15,10 @@ from utils.io_utils import get_feature_cache_path
 from utils.fingerprints import compute_fingerprints
 from utils.metrics import get_hi_metrics, aggregate_fold_metrics
 
-
 # -------------------------------------------------------------------------
 # Reproducibility
 # -------------------------------------------------------------------------
+
 
 def set_seed(seed: int):
     """
@@ -38,6 +38,7 @@ def set_seed(seed: int):
 # Data preparation
 # -------------------------------------------------------------------------
 
+
 def featurize_fold(fold_idx, cfg, folds_data):
     """
     Convert one fold from SMILES/dataframes to PyTorch tensors.
@@ -50,7 +51,7 @@ def featurize_fold(fold_idx, cfg, folds_data):
     """
 
     train_df = folds_data[fold_idx]["train"]
-    test_df  = folds_data[fold_idx]["test"]
+    test_df = folds_data[fold_idx]["test"]
 
     # cache paths
     train_cache = get_feature_cache_path(
@@ -83,16 +84,12 @@ def featurize_fold(fold_idx, cfg, folds_data):
 
     # numpy array --> pytorch tensors
     X_train = torch.from_numpy(X_train_np).float()
-    X_test  = torch.from_numpy(X_test_np).float()
+    X_test = torch.from_numpy(X_test_np).float()
 
     # float for BCEWithLogitsLoss --> 0.0 or 1.0
-    y_train = torch.from_numpy(
-        train_df["value"].values.astype(np.float32)
-    ).float()
+    y_train = torch.from_numpy(train_df["value"].values.astype(np.float32)).float()
 
-    y_test = torch.from_numpy(
-        test_df["value"].values.astype(np.float32)
-    ).float()
+    y_test = torch.from_numpy(test_df["value"].values.astype(np.float32)).float()
 
     return X_train, y_train, X_test, y_test
 
@@ -101,7 +98,7 @@ def prepare_all_fold_tensors(cfg, folds_data, logger=None):
     """
     Precompute fingerprints/descriptors and tensors for all outer folds.
 
-    No feature scaling is applied here. This is intentional: continuous descriptors, 
+    No feature scaling is applied here. This is intentional: continuous descriptors,
     such as rdkit_desc, must be scaled later inside the correct train/validation split to avoid leakage.
     """
 
@@ -119,8 +116,8 @@ def prepare_all_fold_tensors(cfg, folds_data, logger=None):
         folds_tensors[fold_idx] = {
             "X_train": X_train,
             "y_train": y_train,
-            "X_test":  X_test,
-            "y_test":  y_test,
+            "X_test": X_test,
+            "y_test": y_test,
             "scale_features": scale_features,
         }
 
@@ -223,6 +220,7 @@ def should_drop_last_for_batchnorm(X, batch_size, batchnorm):
 # Model architecture
 # -------------------------------------------------------------------------
 
+
 def build_hidden_layers(n_layers, n_nodes, r):
     """
     Build hidden-layer widths using a flat or pyramidal shape.
@@ -237,18 +235,18 @@ def build_hidden_layers(n_layers, n_nodes, r):
     # flat network
     if r == 1.0:
         width = n_nodes // n_layers
-        return [max(1, width)] * n_layers # to avoid layers with 0 neurons
+        return [max(1, width)] * n_layers  # to avoid layers with 0 neurons
 
     # pyramidal network formula
     # e.g. n_layers=3 , n_nodes=896 , r=0.5 --> first_width=512
-    first_width = n_nodes * (1 - r) / (1 - r ** n_layers)
+    first_width = n_nodes * (1 - r) / (1 - r**n_layers)
 
     widths = []
 
     # construct every width
     # e.g n_layers = 3, first_width = 512, r = 0.5 --> [512, 256, 128]
     for layer_idx in range(n_layers):
-        width = round(first_width * (r ** layer_idx))
+        width = round(first_width * (r**layer_idx))
         width = max(1, int(width))
         widths.append(width)
 
@@ -342,7 +340,7 @@ class SimpleMLP(nn.Module):
             if dropout > 0:
                 layers.append(nn.Dropout(dropout))
 
-            current_dim = hidden_dim # e.g. 2048 → 512
+            current_dim = hidden_dim  # e.g. 2048 → 512
 
         output_layer = nn.Linear(current_dim, 1)
         nn.init.xavier_uniform_(output_layer.weight)
@@ -385,12 +383,13 @@ def create_model(input_dim, hp):
 # Training and validation
 # -------------------------------------------------------------------------
 
+
 def train_one_epoch(model, loader, criterion, optimizer, grad_clip, device):
     """
     Train the model for one epoch and return average training loss.
     """
 
-    model.train() 
+    model.train()
 
     total_loss = 0.0
     n_examples = 0
@@ -401,7 +400,7 @@ def train_one_epoch(model, loader, criterion, optimizer, grad_clip, device):
 
         optimizer.zero_grad()
 
-        logits = model(X_batch) # forward pass
+        logits = model(X_batch)  # forward pass
         loss = criterion(logits, y_batch)
 
         loss.backward()
@@ -415,7 +414,7 @@ def train_one_epoch(model, loader, criterion, optimizer, grad_clip, device):
         optimizer.step()
 
         batch_size = len(y_batch)
-        total_loss += loss.item() * batch_size # weighted mean on the epoch
+        total_loss += loss.item() * batch_size  # weighted mean on the epoch
         n_examples += batch_size
 
     average_loss = total_loss / max(1, n_examples)
@@ -428,7 +427,7 @@ def predict_probabilities(model, X, device):
     Predict positive-class probabilities from logits.
     """
 
-    model.eval() # always before making predictions
+    model.eval()  # always before making predictions
 
     with torch.no_grad():
         logits = model(X.to(device))
@@ -456,7 +455,13 @@ def evaluate_model(model, X_val, y_val, device):
     return metrics
 
 
-def train_and_evaluate( X_train, y_train, X_val, y_val, hp, device,
+def train_and_evaluate(
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    hp,
+    device,
     seed=42,
 ):
     """
@@ -468,7 +473,7 @@ def train_and_evaluate( X_train, y_train, X_val, y_val, hp, device,
     set_seed(seed)
 
     model, hidden_layers = create_model(
-        input_dim=X_train.shape[1], # e.g. ecfp4 --> 2048
+        input_dim=X_train.shape[1],  # e.g. ecfp4 --> 2048
         hp=hp,
     )
 
@@ -488,9 +493,9 @@ def train_and_evaluate( X_train, y_train, X_val, y_val, hp, device,
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode="max", # max beacuse pr-auc must increment
+        mode="max",  # max beacuse pr-auc must increment
         factor=0.5,
-        patience=5, # reduce learning rate if PR-AUC plateaus for 5 epochs (not early stopping). 
+        patience=5,  # reduce learning rate if PR-AUC plateaus for 5 epochs (not early stopping).
     )
 
     drop_last = should_drop_last_for_batchnorm(
@@ -572,6 +577,7 @@ def train_and_evaluate( X_train, y_train, X_val, y_val, hp, device,
 # Hyperparameter search
 # -------------------------------------------------------------------------
 
+
 def sample_hyperparameters(search_space, rng):
     """
     Sample one random hyperparameter configuration.
@@ -611,7 +617,10 @@ def check_stratified_cv_is_possible(y_train, inner_k):
         )
 
 
-def maybe_scale_inner_features(X_inner_train, X_inner_val, scale_features,
+def maybe_scale_inner_features(
+    X_inner_train,
+    X_inner_val,
+    scale_features,
 ):
     """
     Scale features inside one inner-CV split if needed.
@@ -632,7 +641,15 @@ def maybe_scale_inner_features(X_inner_train, X_inner_val, scale_features,
     )
 
 
-def evaluate_hyperparameters_inner_cv( X_train, y_train, hp, fixed_hp, inner_k, device, seed, scale_features=False,
+def evaluate_hyperparameters_inner_cv(
+    X_train,
+    y_train,
+    hp,
+    fixed_hp,
+    inner_k,
+    device,
+    seed,
+    scale_features=False,
 ):
     """
     Evaluate one hyperparameter configuration with inner stratified CV.
@@ -694,7 +711,18 @@ def evaluate_hyperparameters_inner_cv( X_train, y_train, hp, fixed_hp, inner_k, 
     return mean_score, mean_train_loss_at_best
 
 
-def run_random_search_for_fold( X_train, y_train, fold_idx, cfg, search_space, fixed_hp, n_iter, device, seed, logger=None, scale_features=False,
+def run_random_search_for_fold(
+    X_train,
+    y_train,
+    fold_idx,
+    cfg,
+    search_space,
+    fixed_hp,
+    n_iter,
+    device,
+    seed,
+    logger=None,
+    scale_features=False,
 ):
     """
     Run random search inside one outer fold.
@@ -770,6 +798,7 @@ def run_random_search_for_fold( X_train, y_train, fold_idx, cfg, search_space, f
 # Final retraining and test evaluation
 # -------------------------------------------------------------------------
 
+
 def predict_with_trained_state(X_test, input_dim, hp, state_dict, device):
     """
     Rebuild the model, load saved weights, and predict test probabilities.
@@ -810,7 +839,19 @@ def make_stratified_holdout_split(y, val_fraction=0.15, seed=42):
     return train_idx, val_idx
 
 
-def retrain_ensemble_and_evaluate_test( X_train, y_train, X_test, y_test, best_hp, best_train_loss_diagnostic, fold_idx, n_seeds, device, seed, logger=None, scale_features=False,
+def retrain_ensemble_and_evaluate_test(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    best_hp,
+    best_train_loss_diagnostic,
+    fold_idx,
+    n_seeds,
+    device,
+    seed,
+    logger=None,
+    scale_features=False,
 ):
     """
     Retrain the best configuration with multiple seeds and evaluate the
@@ -879,12 +920,14 @@ def retrain_ensemble_and_evaluate_test( X_train, y_train, X_test, y_test, best_h
 
         all_test_probabilities.append(test_probabilities)
 
-        seed_results.append({
-            "seed": current_seed,
-            "best_epoch": training_result["best_epoch"],
-            "best_score": training_result["best_score"],
-            "hidden_layers": training_result["hidden_layers"],
-        })
+        seed_results.append(
+            {
+                "seed": current_seed,
+                "best_epoch": training_result["best_epoch"],
+                "best_score": training_result["best_score"],
+                "hidden_layers": training_result["hidden_layers"],
+            }
+        )
 
     ensemble_probabilities = np.mean(
         all_test_probabilities,
@@ -909,7 +952,17 @@ def retrain_ensemble_and_evaluate_test( X_train, y_train, X_test, y_test, best_h
 # Full nested random-search pipeline
 # -------------------------------------------------------------------------
 
-def run_nested_random_search( cfg, folds_tensors, search_space, fixed_hp, n_iter, n_seeds, device, seed=42, logger=None,
+
+def run_nested_random_search(
+    cfg,
+    folds_tensors,
+    search_space,
+    fixed_hp,
+    n_iter,
+    n_seeds,
+    device,
+    seed=42,
+    logger=None,
 ):
     """
     Run nested CV with random search and final ensemble evaluation.
@@ -919,34 +972,32 @@ def run_nested_random_search( cfg, folds_tensors, search_space, fixed_hp, n_iter
 
     for fold_idx in cfg["outer_folds"]:
         if logger is not None:
-            logger.info(
-                f"\n{'=' * 60}\n"
-                f"OUTER FOLD {fold_idx}\n"
-                f"{'=' * 60}"
-            )
+            logger.info(f"\n{'=' * 60}\n" f"OUTER FOLD {fold_idx}\n" f"{'=' * 60}")
 
         X_train = folds_tensors[fold_idx]["X_train"]
         y_train = folds_tensors[fold_idx]["y_train"]
-        X_test  = folds_tensors[fold_idx]["X_test"]
-        y_test  = folds_tensors[fold_idx]["y_test"]
+        X_test = folds_tensors[fold_idx]["X_test"]
+        y_test = folds_tensors[fold_idx]["y_test"]
 
         scale_features = folds_tensors[fold_idx].get(
             "scale_features",
             False,
         )
 
-        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = run_random_search_for_fold(
-            X_train=X_train,
-            y_train=y_train,
-            fold_idx=fold_idx,
-            cfg=cfg,
-            search_space=search_space,
-            fixed_hp=fixed_hp,
-            n_iter=n_iter,
-            device=device,
-            seed=seed,
-            logger=logger,
-            scale_features=scale_features,
+        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = (
+            run_random_search_for_fold(
+                X_train=X_train,
+                y_train=y_train,
+                fold_idx=fold_idx,
+                cfg=cfg,
+                search_space=search_space,
+                fixed_hp=fixed_hp,
+                n_iter=n_iter,
+                device=device,
+                seed=seed,
+                logger=logger,
+                scale_features=scale_features,
+            )
         )
 
         if logger is not None:
@@ -973,8 +1024,7 @@ def run_nested_random_search( cfg, folds_tensors, search_space, fixed_hp, n_iter
 
         if logger is not None:
             logger.info(
-                f"[Fold {fold_idx}] "
-                f"Test metrics: {final_result['test_metrics']}"
+                f"[Fold {fold_idx}] " f"Test metrics: {final_result['test_metrics']}"
             )
 
         fold_result = {
@@ -997,7 +1047,18 @@ def run_nested_random_search( cfg, folds_tensors, search_space, fixed_hp, n_iter
 # Grid search
 # -------------------------------------------------------------------------
 
-def run_grid_search_for_fold( X_train, y_train, fold_idx, cfg, grid, fixed_hp, device, seed, logger=None, scale_features=False,
+
+def run_grid_search_for_fold(
+    X_train,
+    y_train,
+    fold_idx,
+    cfg,
+    grid,
+    fixed_hp,
+    device,
+    seed,
+    logger=None,
+    scale_features=False,
 ):
     """
     Evaluate every configuration in a fixed grid with inner stratified CV.
@@ -1059,7 +1120,15 @@ def run_grid_search_for_fold( X_train, y_train, fold_idx, cfg, grid, fixed_hp, d
     return best_hp, best_score, best_train_loss_diagnostic, search_results
 
 
-def run_nested_grid_search( cfg, folds_tensors, grid, fixed_hp, n_seeds, device, seed=42, logger=None,
+def run_nested_grid_search(
+    cfg,
+    folds_tensors,
+    grid,
+    fixed_hp,
+    n_seeds,
+    device,
+    seed=42,
+    logger=None,
 ):
     """
     Run nested CV with grid search and final ensemble evaluation.
@@ -1070,32 +1139,32 @@ def run_nested_grid_search( cfg, folds_tensors, grid, fixed_hp, n_seeds, device,
     for fold_idx in cfg["outer_folds"]:
         if logger is not None:
             logger.info(
-                f"\n{'=' * 60}\n"
-                f"GRID SEARCH — OUTER FOLD {fold_idx}\n"
-                f"{'=' * 60}"
+                f"\n{'=' * 60}\n" f"GRID SEARCH — OUTER FOLD {fold_idx}\n" f"{'=' * 60}"
             )
 
         X_train = folds_tensors[fold_idx]["X_train"]
         y_train = folds_tensors[fold_idx]["y_train"]
-        X_test  = folds_tensors[fold_idx]["X_test"]
-        y_test  = folds_tensors[fold_idx]["y_test"]
+        X_test = folds_tensors[fold_idx]["X_test"]
+        y_test = folds_tensors[fold_idx]["y_test"]
 
         scale_features = folds_tensors[fold_idx].get(
             "scale_features",
             False,
         )
 
-        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = run_grid_search_for_fold(
-            X_train=X_train,
-            y_train=y_train,
-            fold_idx=fold_idx,
-            cfg=cfg,
-            grid=grid,
-            fixed_hp=fixed_hp,
-            device=device,
-            seed=seed,
-            logger=logger,
-            scale_features=scale_features,
+        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = (
+            run_grid_search_for_fold(
+                X_train=X_train,
+                y_train=y_train,
+                fold_idx=fold_idx,
+                cfg=cfg,
+                grid=grid,
+                fixed_hp=fixed_hp,
+                device=device,
+                seed=seed,
+                logger=logger,
+                scale_features=scale_features,
+            )
         )
 
         if logger is not None:
@@ -1122,8 +1191,7 @@ def run_nested_grid_search( cfg, folds_tensors, grid, fixed_hp, n_seeds, device,
 
         if logger is not None:
             logger.info(
-                f"[Fold {fold_idx}] "
-                f"Test metrics: {final_result['test_metrics']}"
+                f"[Fold {fold_idx}] " f"Test metrics: {final_result['test_metrics']}"
             )
 
         fold_result = {
@@ -1146,15 +1214,13 @@ def run_nested_grid_search( cfg, folds_tensors, grid, fixed_hp, n_seeds, device,
 # Reporting
 # -------------------------------------------------------------------------
 
+
 def print_final_results(fold_results, title="MLP RESULTS"):
     """
     Print per-fold and aggregated test results.
     """
 
-    test_metrics_per_fold = [
-        result["test_metrics"]
-        for result in fold_results
-    ]
+    test_metrics_per_fold = [result["test_metrics"] for result in fold_results]
 
     aggregated_metrics = aggregate_fold_metrics(
         test_metrics_per_fold,
@@ -1171,11 +1237,7 @@ def print_final_results(fold_results, title="MLP RESULTS"):
         pr_auc = metrics.get("pr_auc", float("nan"))
         roc_auc = metrics.get("roc_auc", float("nan"))
 
-        print(
-            f"Fold {fold}: "
-            f"PR-AUC={pr_auc:.4f}  "
-            f"ROC-AUC={roc_auc:.4f}"
-        )
+        print(f"Fold {fold}: " f"PR-AUC={pr_auc:.4f}  " f"ROC-AUC={roc_auc:.4f}")
 
     print("\nAggregated metrics:")
 

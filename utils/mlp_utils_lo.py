@@ -24,10 +24,8 @@ from utils.mlp_utils import (
     train_one_epoch,
 )
 
-
-# -------------------------------------------------------------------------
 # Data preparation
-# -------------------------------------------------------------------------
+
 
 def featurize_fold_lo(fold_idx, cfg, folds_data):
     """
@@ -35,7 +33,7 @@ def featurize_fold_lo(fold_idx, cfg, folds_data):
     """
 
     train_df = folds_data[fold_idx]["train"]
-    test_df  = folds_data[fold_idx]["test"]
+    test_df = folds_data[fold_idx]["test"]
 
     train_cache = get_feature_cache_path(
         cfg["task"],
@@ -66,17 +64,17 @@ def featurize_fold_lo(fold_idx, cfg, folds_data):
     )
 
     X_train = torch.from_numpy(X_train_np).float()
-    X_test  = torch.from_numpy(X_test_np).float()
+    X_test = torch.from_numpy(X_test_np).float()
 
     y_train_np = train_df["value"].values.astype(np.float32)
-    y_test_np  = test_df["value"].values.astype(np.float32)
+    y_test_np = test_df["value"].values.astype(np.float32)
 
     y_train = torch.from_numpy(y_train_np).float()
-    y_test  = torch.from_numpy(y_test_np).float()
+    y_test = torch.from_numpy(y_test_np).float()
 
     # kept only for logging/reference.
     y_mean = float(y_train_np.mean())
-    y_std  = float(y_train_np.std())
+    y_std = float(y_train_np.std())
 
     if y_std == 0:
         y_std = 1.0
@@ -136,9 +134,8 @@ def prepare_all_fold_tensors_lo(cfg, folds_data, logger=None):
     return folds_tensors
 
 
-# -------------------------------------------------------------------------
 # Small scaling utilities
-# -------------------------------------------------------------------------
+
 
 def scale_features_from_train_lo(X_train, X_other):
     """
@@ -169,7 +166,7 @@ def scale_target_from_train_lo(y_train_np, y_other_np):
     """
 
     y_mean = float(y_train_np.mean())
-    y_std  = float(y_train_np.std())
+    y_std = float(y_train_np.std())
 
     if y_std == 0:
         y_std = 1.0
@@ -196,7 +193,10 @@ def inverse_scale_predictions_lo(predictions, target_scaler):
     return predictions * target_scaler["std"] + target_scaler["mean"]
 
 
-def maybe_scale_inner_features_lo( X_inner_train, X_inner_val, scale_features,
+def maybe_scale_inner_features_lo(
+    X_inner_train,
+    X_inner_val,
+    scale_features,
 ):
     """
     Scale features inside one inner-CV split if needed.
@@ -237,7 +237,10 @@ def should_drop_last_for_batchnorm_lo(X, batch_size, batchnorm):
     return last_batch_size == 1
 
 
-def make_holdout_split_lo( n_samples, val_fraction=0.15, seed=42,
+def make_holdout_split_lo(
+    n_samples,
+    val_fraction=0.15,
+    seed=42,
 ):
     """
     Create a simple random train/validation split for final early stopping.
@@ -257,9 +260,8 @@ def make_holdout_split_lo( n_samples, val_fraction=0.15, seed=42,
     return train_idx, val_idx
 
 
-# -------------------------------------------------------------------------
 # Prediction
-# -------------------------------------------------------------------------
+
 
 def predict_values(model, X, device):
     """
@@ -277,9 +279,8 @@ def predict_values(model, X, device):
     return predictions.cpu().numpy()
 
 
-# -------------------------------------------------------------------------
 # Training and validation
-# -------------------------------------------------------------------------
+
 
 def evaluate_model_lo(model, X_val, y_val, device):
     """
@@ -307,7 +308,15 @@ def evaluate_model_lo(model, X_val, y_val, device):
     return metrics
 
 
-def train_and_evaluate_lo( X_train, y_train, X_val, y_val, cluster_val, hp, device, seed=42,
+def train_and_evaluate_lo(
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    cluster_val,
+    hp,
+    device,
+    seed=42,
 ):
     """
     Train one MLP for Lo regression.
@@ -422,9 +431,8 @@ def train_and_evaluate_lo( X_train, y_train, X_val, y_val, cluster_val, hp, devi
     return result
 
 
-# -------------------------------------------------------------------------
 # Hyperparameter search
-# -------------------------------------------------------------------------
+
 
 def sample_hyperparameters(search_space, rng):
     """
@@ -446,7 +454,16 @@ def sample_hyperparameters(search_space, rng):
     return hp
 
 
-def evaluate_hyperparameters_inner_cv_lo( X_train, y_train, cluster_train, hp, fixed_hp, inner_k, device, seed, scale_features=False,
+def evaluate_hyperparameters_inner_cv_lo(
+    X_train,
+    y_train,
+    cluster_train,
+    hp,
+    fixed_hp,
+    inner_k,
+    device,
+    seed,
+    scale_features=False,
 ):
     """
     Evaluate one hyperparameter configuration with inner KFold CV.
@@ -509,7 +526,19 @@ def evaluate_hyperparameters_inner_cv_lo( X_train, y_train, cluster_train, hp, f
     return mean_score, mean_train_loss_at_best
 
 
-def run_random_search_for_fold_lo( X_train, y_train, cluster_train, fold_idx, cfg, search_space, fixed_hp, n_iter, device, seed, logger=None, scale_features=False,
+def run_random_search_for_fold_lo(
+    X_train,
+    y_train,
+    cluster_train,
+    fold_idx,
+    cfg,
+    search_space,
+    fixed_hp,
+    n_iter,
+    device,
+    seed,
+    logger=None,
+    scale_features=False,
 ):
     """
     Run random search inside one outer Lo fold.
@@ -527,16 +556,18 @@ def run_random_search_for_fold_lo( X_train, y_train, cluster_train, fold_idx, cf
 
         start_time = time.time()
 
-        mean_inner_score, mean_train_loss_at_best = evaluate_hyperparameters_inner_cv_lo(
-            X_train=X_train,
-            y_train=y_train,
-            cluster_train=cluster_train,
-            hp=hp,
-            fixed_hp=fixed_hp,
-            inner_k=cfg["inner_k"],
-            device=device,
-            seed=seed + fold_idx,
-            scale_features=scale_features,
+        mean_inner_score, mean_train_loss_at_best = (
+            evaluate_hyperparameters_inner_cv_lo(
+                X_train=X_train,
+                y_train=y_train,
+                cluster_train=cluster_train,
+                hp=hp,
+                fixed_hp=fixed_hp,
+                inner_k=cfg["inner_k"],
+                device=device,
+                seed=seed + fold_idx,
+                scale_features=scale_features,
+            )
         )
 
         elapsed_time = time.time() - start_time
@@ -586,7 +617,13 @@ def run_random_search_for_fold_lo( X_train, y_train, cluster_train, fold_idx, cf
 # Final retraining and test evaluation
 # -------------------------------------------------------------------------
 
-def predict_with_trained_state_lo( X_test, input_dim, hp, state_dict, device,
+
+def predict_with_trained_state_lo(
+    X_test,
+    input_dim,
+    hp,
+    state_dict,
+    device,
 ):
     """
     Rebuild the model, load saved weights, and predict continuous values.
@@ -609,7 +646,21 @@ def predict_with_trained_state_lo( X_test, input_dim, hp, state_dict, device,
     return predictions
 
 
-def retrain_ensemble_and_evaluate_test_lo( X_train, y_train, X_test, y_test, cluster_train, cluster_test, best_hp, best_train_loss_diagnostic, fold_idx, n_seeds, device, seed, logger=None, scale_features=False,
+def retrain_ensemble_and_evaluate_test_lo(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    cluster_train,
+    cluster_test,
+    best_hp,
+    best_train_loss_diagnostic,
+    fold_idx,
+    n_seeds,
+    device,
+    seed,
+    logger=None,
+    scale_features=False,
 ):
     """
     Retrain the best Lo configuration with multiple seeds and evaluate
@@ -661,7 +712,7 @@ def retrain_ensemble_and_evaluate_test_lo( X_train, y_train, X_test, y_test, clu
             y_es_np,
         )
 
-        # kept for compatibility. Not used for early stopping 
+        # kept for compatibility. Not used for early stopping
         cluster_es = cluster_train[es_idx]
 
         training_result = train_and_evaluate_lo(
@@ -698,12 +749,14 @@ def retrain_ensemble_and_evaluate_test_lo( X_train, y_train, X_test, y_test, clu
 
         all_test_predictions_real.append(test_predictions_real)
 
-        seed_results.append({
-            "seed": current_seed,
-            "best_epoch": training_result["best_epoch"],
-            "best_score_neg_mse": training_result["best_score"],
-            "hidden_layers": training_result["hidden_layers"],
-        })
+        seed_results.append(
+            {
+                "seed": current_seed,
+                "best_epoch": training_result["best_epoch"],
+                "best_score_neg_mse": training_result["best_score"],
+                "hidden_layers": training_result["hidden_layers"],
+            }
+        )
 
     ensemble_predictions = np.mean(
         all_test_predictions_real,
@@ -729,7 +782,18 @@ def retrain_ensemble_and_evaluate_test_lo( X_train, y_train, X_test, y_test, clu
 # Full nested random-search pipeline
 # -------------------------------------------------------------------------
 
-def run_nested_random_search_lo( cfg, folds_tensors, folds_data, search_space, fixed_hp, n_iter, n_seeds, device, seed=42, logger=None,
+
+def run_nested_random_search_lo(
+    cfg,
+    folds_tensors,
+    folds_data,
+    search_space,
+    fixed_hp,
+    n_iter,
+    n_seeds,
+    device,
+    seed=42,
+    logger=None,
 ):
     """
     Run nested CV with random search for the Lo task.
@@ -744,16 +808,12 @@ def run_nested_random_search_lo( cfg, folds_tensors, folds_data, search_space, f
 
     for fold_idx in cfg["outer_folds"]:
         if logger is not None:
-            logger.info(
-                f"\n{'=' * 60}\n"
-                f"OUTER FOLD {fold_idx}\n"
-                f"{'=' * 60}"
-            )
+            logger.info(f"\n{'=' * 60}\n" f"OUTER FOLD {fold_idx}\n" f"{'=' * 60}")
 
         X_train = folds_tensors[fold_idx]["X_train"]
         y_train = folds_tensors[fold_idx]["y_train"]
-        X_test  = folds_tensors[fold_idx]["X_test"]
-        y_test  = folds_tensors[fold_idx]["y_test"]
+        X_test = folds_tensors[fold_idx]["X_test"]
+        y_test = folds_tensors[fold_idx]["y_test"]
 
         scale_features = folds_tensors[fold_idx].get(
             "scale_features",
@@ -761,21 +821,23 @@ def run_nested_random_search_lo( cfg, folds_tensors, folds_data, search_space, f
         )
 
         cluster_train = folds_data[fold_idx]["train"]["cluster"].values
-        cluster_test  = folds_data[fold_idx]["test"]["cluster"].values
+        cluster_test = folds_data[fold_idx]["test"]["cluster"].values
 
-        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = run_random_search_for_fold_lo(
-            X_train=X_train,
-            y_train=y_train,
-            cluster_train=cluster_train,
-            fold_idx=fold_idx,
-            cfg=cfg,
-            search_space=search_space,
-            fixed_hp=fixed_hp,
-            n_iter=n_iter,
-            device=device,
-            seed=seed,
-            logger=logger,
-            scale_features=scale_features,
+        best_hp, best_inner_score, best_train_loss_diagnostic, search_results = (
+            run_random_search_for_fold_lo(
+                X_train=X_train,
+                y_train=y_train,
+                cluster_train=cluster_train,
+                fold_idx=fold_idx,
+                cfg=cfg,
+                search_space=search_space,
+                fixed_hp=fixed_hp,
+                n_iter=n_iter,
+                device=device,
+                seed=seed,
+                logger=logger,
+                scale_features=scale_features,
+            )
         )
 
         if logger is not None:
@@ -805,8 +867,7 @@ def run_nested_random_search_lo( cfg, folds_tensors, folds_data, search_space, f
 
         if logger is not None:
             logger.info(
-                f"[Fold {fold_idx}] "
-                f"Test metrics: {final_result['test_metrics']}"
+                f"[Fold {fold_idx}] " f"Test metrics: {final_result['test_metrics']}"
             )
 
         fold_result = {
@@ -829,15 +890,13 @@ def run_nested_random_search_lo( cfg, folds_tensors, folds_data, search_space, f
 # Reporting
 # -------------------------------------------------------------------------
 
+
 def print_final_results_lo(fold_results, title="MLP LO RESULTS"):
     """
     Print per-fold and aggregated test results for the Lo task.
     """
 
-    test_metrics_per_fold = [
-        result["test_metrics"]
-        for result in fold_results
-    ]
+    test_metrics_per_fold = [result["test_metrics"] for result in fold_results]
 
     aggregated_metrics = aggregate_fold_metrics(
         test_metrics_per_fold,
@@ -853,10 +912,7 @@ def print_final_results_lo(fold_results, title="MLP LO RESULTS"):
 
         spearman = metrics.get("mean_spearman", float("nan"))
 
-        print(
-            f"Fold {fold}: "
-            f"mean_spearman={spearman:.4f}"
-        )
+        print(f"Fold {fold}: " f"mean_spearman={spearman:.4f}")
 
     print("\nAggregated metrics:")
 
