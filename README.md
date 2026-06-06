@@ -1,19 +1,21 @@
 # Drug Discovery Lo-Hi
 
-A rigorous re-implementation and extension of the **Lo-Hi benchmark** for practical
-machine learning in drug discovery, originally proposed by Steshin (NeurIPS 2023).
+A rigorous re-implementation and extension of the **Lo-Hi benchmark** for
+practical machine learning in drug discovery, originally proposed by Steshin
+(NeurIPS 2023).
 
-This repository provides a clean, modular pipeline to evaluate a wide range of
-machine learning models, from classical baselines to multi-layer perceptrons, on the two complementary tasks defined by the benchmark:
+This repository provides a clean, modular pipeline to evaluate a wide range of machine learning models, from classical baselines to multi-layer perceptrons, on the two complementary tasks defined by the benchmark:
 
 - **Hi (Hit Identification)** — binary classification on test molecules that
-  are dissimilar from the training set (Tanimoto ECFP4 < 0.4), simulating the
-  search for novel, patentable hits during virtual screening.
+  are structurally dissimilar from the training set (Tanimoto ECFP4 < 0.4),
+  simulating the search for novel, patentable hits during virtual screening.
 - **Lo (Lead Optimization)** — intra-cluster ranking of structurally similar
   molecules, simulating the optimization of a known hit by minor chemical
   modifications.
 
-## References
+The additional analyses are designed to separate three questions: whether the validation protocol changes model selection, whether Lo-Hi folds are structurally distinguishable, and whether the observed structural shift overlaps with activity-relevant molecular features.
+
+### References
 
 - **Original paper:** Simon Steshin, *Lo-Hi: Practical ML Drug Discovery
   Benchmark*, NeurIPS 2023 — Datasets and Benchmarks Track.
@@ -21,581 +23,395 @@ machine learning models, from classical baselines to multi-layer perceptrons, on
 - **Original benchmark code:** <https://github.com/SteshinSS/lohi_neurips2023>
 - **Lo-Hi splitter library:** <https://github.com/SteshinSS/lohi_splitter>
 
-The datasets (DRD2, HIV, KDR, Sol, KCNH2) and their pre-defined three-fold
-splits are taken from the original benchmark repository.
+---
+
+## Main training pipeline and results
+
+### Pipeline overview
+
+The main training pipeline is driven by YAML configuration files and executed
+through `training/train_model.py`. Each config specifies dataset, task,
+molecular representation, model family, hyperparameter search space, inner
+cross-validation strategy, and which artifacts to save.
+
+For each outer fold the pipeline: loads or computes cached fingerprints →
+runs inner cross-validation on the training partition only → selects
+hyperparameters → refits on the full training partition → evaluates on the
+held-out test fold. Predictions, best parameters, trained models, complexity
+metrics, and feature importances are saved under `results/`.
+
+**Supported models:** Logistic Regression, Linear/Poly/RBF/Tanimoto SVM,
+Decision Tree, Random Forest, Gradient Boosting, XGBoost, KNN, Dummy
+baseline, MLP (separate notebooks).
+
+**Molecular representations:** ECFP4 (2048 bits), MACCS (167 keys), RDKit
+2D descriptors, RDKit topological fingerprints.
+
+**Evaluation metrics:** PR-AUC (primary for Hi), ROC-AUC, BEDROC; mean
+intra-cluster Spearman correlation (primary for Lo).
+
+### Hi task — PR-AUC
+
+| Model | DRD2-Hi | HIV-Hi | KDR-Hi | Sol-Hi |
+|---|---:|---:|---:|---:|
+| Dummy | 0.677 ± 0.061 | 0.040 ± 0.014 | 0.609 ± 0.081 | 0.215 ± 0.008 |
+| LR (ECFP4) | 0.774 ± 0.084 | 0.071 ± 0.031 | 0.660 ± 0.064 | 0.481 ± 0.050 |
+| LR (MACCS) | 0.733 ± 0.064 | 0.099 ± 0.049 | 0.602 ± 0.091 | 0.474 ± 0.017 |
+| LR (RDKit Desc.) | 🥇 **0.794 ± 0.060** | 0.112 ± 0.054 | 0.645 ± 0.078 | 🥈 **0.596 ± 0.025** |
+| DT (ECFP4) | 0.715 ± 0.071 | 0.045 ± 0.014 | 0.642 ± 0.025 | 0.330 ± 0.022 |
+| DT (MACCS) | 0.687 ± 0.048 | 0.068 ± 0.035 | 0.630 ± 0.090 | 0.332 ± 0.028 |
+| SVM Linear (ECFP4) | 0.773 ± 0.088 | 0.062 ± 0.032 | 0.650 ± 0.079 | 0.479 ± 0.065 |
+| SVM Linear (MACCS) | 0.729 ± 0.056 | 0.113 ± 0.051 | 0.582 ± 0.085 | 0.477 ± 0.019 |
+| SVM Poly (RDKit Desc.) | 🥉 **0.775 ± 0.062** | 0.084 ± 0.040 | 🥇 **0.674 ± 0.061** | 0.578 ± 0.024 |
+| SVM RBF (ECFP4) | 0.773 ± 0.079 | 0.095 ± 0.043 | 🥉 **0.669 ± 0.025** | 0.492 ± 0.051 |
+| SVM Tanimoto (ECFP4) | 0.775 ± 0.078 | 0.083 ± 0.033 | 🥈 **0.672 ± 0.044** | 0.485 ± 0.047 |
+| RF (RDKit Desc.) | 0.767 ± 0.069 | 🥈 **0.149 ± 0.115** | 0.656 ± 0.057 | 0.548 ± 0.030 |
+| GB (RDKit Desc.) | 🥈 **0.781 ± 0.057** | 🥇 **0.151 ± 0.081** | 0.656 ± 0.061 | 0.569 ± 0.018 |
+| XGBoost (RDKit Desc.) | 0.773 ± 0.048 | 🥉 **0.120 ± 0.070** | 0.662 ± 0.073 | 0.566 ± 0.020 |
+| MLP (RDKit Desc.) | 0.762 ± 0.075 | 0.104 ± 0.046 | 0.629 ± 0.089 | 🥇 **0.597 ± 0.026** |
+
+Selected rows shown. Full results for all model × fingerprint combinations are
+available in the per-dataset result directories.
+
+### Lo task — Mean Spearman
+
+| Model | DRD2-Lo | KCNH2-Lo | KDR-Lo |
+|---|---:|---:|---:|
+| Dummy | 0.000 ± 0.000 | 0.000 ± 0.000 | 0.000 ± 0.000 |
+| XGBoost (ECFP4) | 🥇 **0.354 ± 0.018** | 0.419 ± 0.010 | 0.071 ± 0.010 |
+| SVR Tanimoto (ECFP4) | 🥈 **0.313 ± 0.031** | 0.392 ± 0.014 | 🥈 **0.168 ± 0.012** |
+| RF (ECFP4) | 🥉 **0.306 ± 0.015** | 0.346 ± 0.026 | 0.107 ± 0.021 |
+| RF (RDKit Desc.) | 0.200 ± 0.005 | 0.413 ± 0.042 | 🥇 **0.175 ± 0.036** |
+| GB (RDKit Desc.) | 0.174 ± 0.054 | 🥈 **0.429 ± 0.017** | 🥉 **0.143 ± 0.032** |
+| XGBoost (RDKit Desc.) | 0.208 ± 0.076 | 🥉 **0.427 ± 0.028** | 0.112 ± 0.028 |
+| SVM RBF (ECFP4) | 0.180 ± 0.035 | 🥇 **0.445 ± 0.021** | 0.156 ± 0.027 |
+| SVM Poly (ECFP4) | 0.237 ± 0.011 |  0.357 ± 0.064 | 0.145 ± 0.038 |
+| MLP (ECFP4) | 0.276 ± 0.041 | 0.397 ± 0.019 | 0.151 ± 0.029 |
 
 ---
 
-## What this repository adds with respect to the original paper
+## OOD-holdout vs random-shuffle model selection
 
-- **Nested cross-validation without test-set leakage.**  
-  Hyperparameters are selected independently inside each outer fold using only the
-  training partition. The test fold is used only once, for the final evaluation.
+### Motivation
 
-- **Extended molecular representations.**  
-  In addition to ECFP4 and MACCS fingerprints, this repository evaluates RDKit
-  topological fingerprints and RDKit 2D descriptors. 
+The Hi task requires generalization to molecules structurally dissimilar from
+training. Standard nested CV selects hyperparameters using a random inner
+validation split, where validation molecules may be chemically similar to the
+inner training set. This may introduce an **optimism bias**: the inner score
+overestimates OOD test performance, and the hyperparameter search may favor configurations that perform well on
+in-distribution-like validation data but do not necessarily improve OOD test performance.
 
-- **Modular classical ML pipeline.**  
-  Featurization, model selection, training, evaluation and result saving are
-  organized into reusable modules, making the code easier to extend to new models,
-  datasets and future ChEMBL versions.
+### Protocol design
 
-- **Larger hyperparameter searches.**  
-  Classical models are evaluated with more systematic grid or random searches,
-  performed separately for each outer fold.
+The Lo-Hi fold structure provides a natural OOD inner holdout without any new
+splitting logic. The three Hi subsets F1, F2, F3 are mutually dissimilar by
+construction. For each outer fold, the two non-test Lo-Hi subsets are used as chemically distinct inner train and inner validation subsets. 
+After hyperparameter selection, the model is refitted on their union, which reconstructs the full outer training set. The **random-shuffle protocol** uses the same outer training set and samples a stratified validation split whose size is matched to the corresponding OOD-holdout validation subset. In both cases the
+selected model is refitted on the full outer training set before test
+evaluation.
 
-- **Additional models.**
-  In addition to the models evaluated in the original paper, the repository also tests Logistic Regression, Decision Tree, Random Forest, XGBoost, and SVM with linear, polynomial, and Tanimoto kernels.
+### Datasets
 
-- **Improved MLP pipeline.**  
-  The MLP implementation supports configurable depth and width, flat or pyramidal
-  architectures, multiple activation functions, Dropout, optional Batch
-  Normalization, AdamW, learning-rate scheduling, gradient clipping, early stopping
-  on an internal validation split, and multi-seed ensembling.
+The cross-dataset analysis uses **DRD2-Hi, HIV-Hi, and Sol-Hi**. KDR-Hi is
+excluded because its outer training folds are restricted to ~500 molecules,
+making the `train_i = F_j ∪ F_k` reconstruction non-comparable with the other
+datasets.
 
-- **Task-specific MLP training.**  
-  Hi is treated as binary classification, while Lo is treated as regression/ranking
-  with target standardization and final intra-cluster Spearman evaluation.
+### Key quantities
 
-- **OOD vs in-distribution inner validation protocol comparison.**
-  A systematic study of how the choice of inner validation strategy during
-  hyperparameter selection affects model complexity, optimism bias, feature
-  reliance, and final out-of-distribution generalization. This comparison is
-  conducted on all four Hi datasets (DRD2, HIV, KDR, Sol) across Decision Tree,
-  Logistic Regression, and Linear SVM, with ECFP4, MACCS, and RDKit descriptor
-  representations. The analysis includes protocol-level performance tables,
-  model complexity metrics, and feature-level explainability comparisons. See the
-  dedicated sections below for details.
+| Quantity | Definition | Interpretation |
+|---|---|---|
+| `inner_test_gap` | inner PR-AUC − test PR-AUC | optimism of the inner estimate |
+| `delta_inner_optimism` | inner_random − inner_OOD | random is more optimistic? |
+| `delta_test_benefit` | test_OOD − test_random | OOD helps on final test? |
+
+### Results
+
+| Dataset | Model + FP | OOD holdout | Random shuffle |
+|---|---|---:|---:|
+| DRD2 | LR + RDKit Desc. | **0.789 ± 0.066** | 0.793 ± 0.061 |
+| DRD2 | SVM + ECFP4 | 0.752 ± 0.080 | **0.764 ± 0.080** |
+| HIV | LR + MACCS | **0.101 ± 0.055** | 0.100 ± 0.048 |
+| HIV | SVM + MACCS | 0.096 ± 0.037 | **0.102 ± 0.074** |
+| Sol | DT + MACCS | **0.333 ± 0.013** | 0.316 ± 0.034 |
+| Sol | LR + RDKit Desc. | **0.590 ± 0.035** | 0.586 ± 0.023 |
+
+### Key insights
+
+Random shuffle tends to produce more optimistic inner-validation estimates than OOD holdout, especially on DRD2 and HIV. However, this reduction in validation optimism does not translate into a systematic improvement on the final OOD test fold: the OOD and random-shuffle test performances are usually close. This suggests a distinction between an **evaluation effect** and a **selection effect**: OOD validation gives a more realistic estimate of future performance, but does not necessarily select a consistently better model. Therefore, the OOD-holdout protocol is useful for measuring optimism, while its benefit for model selection appears dataset- and fold-dependent.
+
+### Notebooks
+
+- `notebooks/hi_ood_vs_random_cross_dataset/01-cross_dataset_tables_hi.ipynb` — builds tables
+- `notebooks/hi_ood_vs_random_cross_dataset/02_cross_dataset_plots_hi.ipynb` — generates plots
+
+---
+
+## Distribution-shift analysis
+
+### Goal
+
+Measure whether the Lo-Hi folds are structurally distinguishable, and whether
+the distinguishing features overlap with the features used by activity models.
+
+### Method
+
+For each dataset and fold pair (F1 vs F2, F1 vs F3, F2 vs F3), a binary
+classifier is trained to discriminate which fold a molecule belongs to. The
+main shift metric is:
+
+```
+shift_score = max(0, 2 × balanced_accuracy − 1)
+```
+
+where 0 = indistinguishable (chance) and 1 = perfectly separable.
+
+The main estimate uses cross-validated `same_search_cv` discriminators (DT,
+LR, SVM). High-capacity in-sample discriminators are reported only as an
+upper-bound diagnostic.
+
+### List A and List B
+
+- **List A** = features important for predicting activity (from the activity
+  models trained in the OOD-vs-random pipeline).
+- **List B** = features important for discriminating folds (from the shift
+  classifiers).
+
+Their overlap quantifies whether the structural shift falls on the predictive
+subspace. Overlap is reported as **enrichment over random expectation**
+(1.0 = chance), which normalizes for the different dimensionalities of ECFP4
+(2048 bits) and MACCS (167 keys).
+
+### Feature importance conventions
+
+- **DT:** permutation importance evaluated on a 20% stratified holdout of the
+  discriminator data (not in-sample), clipped at zero.
+- **LR / SVM:** absolute coefficient values.
+
+### Key insights
+
+The fold-discriminator analysis confirms that the Lo-Hi splits induce real molecular distribution shift, especially for DRD2, so the weak OOD-selection benefit cannot be explained by folds being chemically identical. However, a large structural shift alone is not sufficient to guarantee that OOD validation improves final model selection. The List A/List B overlap analysis shows that the relevant question is whether the shift affects features used for activity prediction, not only whether folds are separable in molecular space. Overall, the alignment between shift features and activity features is present in some cases, but remains heterogeneous across datasets, fingerprints and model families.
+
+### Notebooks
+
+- `notebooks/distribution_shift_analysis/classifier_shift_test_all_hi.ipynb` — computes tables and shift models
+- `notebooks/distribution_shift_analysis/classifier_shift_test_all_hi_plots.ipynb` — generates plots
+
+---
+
+## Tanimoto fold-distance analysis
+
+### Goal
+
+Directly measure the chemical distance between folds in the full molecular
+space and in activity-relevant feature subspaces, using a **random-bit
+baseline** to control for dimensionality reduction artifacts.
+
+### Method
+
+The main metric is the **complete cross-fold pairwise Tanimoto distance**:
+
+```
+D(A, B) = mean_{x∈A, y∈B} [1 − T(x, y)]
+```
+
+computed exhaustively over all molecule pairs between two folds. Nearest-
+neighbour distances are saved as a secondary diagnostic.
+
+For each dataset and fold pair, distances are computed in:
+
+- **Full ECFP4** (all 2048 bits) — baseline structural distance.
+- **Activity top-k bits** (k = 10, 20, 50, 100, 200) — selected from List A
+  importances. Computed for global (pooled), OOD-specific, and random-shuffle-
+  specific activity models, using the best ECFP4 model per dataset.
+- **Random top-k bits** (30 repeats) — the key negative control: random
+  subsets of k bits from the 2048 ECFP4 space.
+
+### Key quantity
+
+```
+Δ = activity top-k distance − random-bit top-k distance
+```
+
+- **Δ < 0:** the activity-relevant subspace is less shifted than a random
+  subspace of the same dimensionality.
+- **Δ ≈ 0:** the activity-relevant subspace behaves similarly to a random
+  top-k subspace.
+- **Δ > 0:** the activity-relevant subspace is more shifted than a random
+  subspace of the same dimensionality.
+
+### Valid molecule fraction
+
+At small k, some molecules may have all-zero restricted fingerprints. The
+`valid_molecule_fraction` and `valid_pair_fraction` are always reported
+alongside restricted-space distances. Small-k results should be interpreted together with these coverage diagnostics,
+especially when the valid molecule fraction is low.
+
+### Key insights
+
+The complete pairwise Tanimoto analysis shows that all Hi datasets exhibit substantial fold-to-fold separation in the full ECFP4 space, but this separation changes when distances are computed only on activity-relevant bits. DRD2 and Sol generally show lower distances in activity-restricted spaces than in the full fingerprint space, while HIV behaves differently and requires more cautious interpretation because restricted-space coverage can be lower at small k. Random-bit baselines are essential here: they show whether changes in distance are due to activity relevance or simply to using fewer bits. The main conclusion is that the relationship between global structural shift and predictive-subspace shift is strongly dataset-dependent.
+
+
+### Notebooks
+
+- `notebooks/tanimoto_distance_analysis/fold_distance_tanimoto.ipynb` — computes and saves tables
+- `notebooks/tanimoto_distance_analysis/fold_distance_tanimoto_plots.ipynb` — generates plots
 
 ---
 
 ## Repository structure
- 
+
 ```
-drug-discovery-lohi/
-├── configs/                  # YAML experiment configs (one per model × task × dataset)
-│   └── hi/
-│       ├── drd2/
-│       │   ├── svm/
-│       │   │   ├── svm_linear_drd2_hi.yaml
-│       │   │   ├── svm_linear_drd2_hi_inner_ood_holdout.yaml
-│       │   │   ├── svm_linear_drd2_hi_random_shuffle.yaml
-│       │   │   └── ...
-│       │   ├── lr/
-│       │   ├── decision_tree/
-│       │   └── ...
-│       ├── hiv/
-│       ├── kdr/
-│       └── sol/
-├── data/                     # Lo-Hi dataset folds (CSV)
-│   ├── hi/{drd2,hiv,kdr,sol}/{train,test}_{1,2,3}.csv
-│   └── lo/{drd2,kcnh2,kdr}/{train,test}_{1,2,3}.csv
-├── features/                 # Cached precomputed fingerprints (.npz)
+.
+├── data/
+│   ├── hi/{drd2,hiv,kdr,sol}/         # train_{1,2,3}.csv, test_{1,2,3}.csv
+│   └── lo/{drd2,kcnh2,kdr}/           # train_{1,2,3}.csv, test_{1,2,3}.csv
+├── configs/                           # YAML experiment configs by task/dataset/model/protocol
+├── features/                          # Cached fingerprint/descriptor matrices (.npz)
+├── results/                           # Model artifacts, predictions, metrics, analysis outputs
 ├── notebooks/
-│   ├── drd2_hi_ood_vs_random_shuffle/
-│   │   ├── 01_build_protocol_tables_drd2.ipynb
-│   │   ├── 02_protocol_plots_drd2.ipynb
-│   │   ├── 03_model_complexity_tables_drd2.ipynb
-│   │   ├── 04_model_complexity_plots_drd2.ipynb
-│   │   ├── 05_feature_explainability_tables_drd2.ipynb
-│   │   └── 06_feature_explainability_plots_drd2.ipynb
-│   ├── hiv_hi_ood_vs_random_shuffle/      # Same 6-notebook structure
-│   ├── kdr_hi_ood_vs_random_shuffle/
-│   ├── sol_hi_ood_vs_random_shuffle/
+│   ├── hi_ood_vs_random_cross_dataset/
+│   │   ├── 01-cross_dataset_tables_hi.ipynb
+│   │   └── 02_cross_dataset_plots_hi.ipynb
+│   ├── distribution_shift_analysis/
+│   │   ├── classifier_shift_test_all_hi.ipynb
+│   │   └── classifier_shift_test_all_hi_plots.ipynb
+│   ├── tanimoto_distance_analysis/
+│   │   ├── fold_distance_tanimoto.ipynb
+│   │   └── fold_distance_tanimoto_plots.ipynb
 │   └── mlp/
 │       ├── mlp_drd2_hi_ecfp4.ipynb
 │       ├── mlp_drd2_hi_rdkit.ipynb
-│       └── ...
-├── results/
-│   ├── hi/{dataset}/{model_fp}/
-│   │   ├── train_{1,2,3}.csv
-│   │   ├── test_{1,2,3}.csv
-│   │   ├── params_fold_{1,2,3}.json
-│   │   ├── model_fold_{1,2,3}.joblib      # When artifacts.save_model: true
-│   │   ├── complexity_fold_{1,2,3}.json   # When artifacts.save_complexity: true
-│   │   ├── feature_importance_fold_{1,2,3}.csv  # When artifacts.save_feature_importance: true
-│   │   └── cv_results_fold_{1,2,3}.csv    # When artifacts.save_cv_results: true
-│   ├── lo/{dataset}/{model_fp}/
-│   └── results_ood_vs_random_shuffle/
-│       └── hi/{drd2,hiv,kdr,sol}/
-│           ├── protocol_summary_numeric.csv
-│           ├── protocol_summary_display.csv
-│           ├── protocol_per_fold.csv
-│           ├── protocol_delta.csv
-│           ├── hyperparameters_all.csv
-│           ├── hyperparameters_{dt,lr,svm}.csv
-│           ├── hyperparameters_set_summary.csv
-│           ├── complexity_all.csv
-│           ├── complexity_{dt,lr,svm}.csv
-│           ├── complexity_gap_analysis.csv
-│           ├── complexity_summary.csv
-│           ├── feature_importance_all.csv
-│           ├── feature_topk.csv
-│           ├── feature_overlap_protocol.csv
-│           ├── feature_stability_intra_protocol.csv
-│           ├── feature_importance_summary.csv
-│           ├── local_molecule_candidates.csv
-│           ├── local_feature_contributions.csv
-│           ├── figures/                   # 4 protocol comparison plots
-│           ├── figures_complexity/        # 4 complexity plots
-│           └── figures_feature_explainability/  # 5 types of explainability plots
-├── splits/
+│       ├── mlp_hiv_hi_ecfp4.ipynb
+│       └── ...                        # One notebook per dataset × fingerprint
 ├── training/
-│   └── train_model.py
-└── utils/
-    ├── fingerprints.py
-    ├── metrics.py
-    ├── cv_pipeline.py        # kfold / holdout / random_shuffle, artifact saving
-    ├── explainability.py     # topk overlap, linear contributions, pipeline unwrapping
-    ├── io_utils.py
-    ├── config_loader.py
-    ├── mlp_utils.py
-    └── mlp_utils_lo.py
+│   └── train_model.py                 # Main CLI entry point
+├── utils/
+│   ├── config_loader.py
+│   ├── cv_pipeline.py                 # kfold / holdout / random_shuffle, artifact saving
+│   ├── fingerprints.py
+│   ├── metrics.py
+│   ├── io_utils.py
+│   ├── mlp_utils.py                   # Hi MLP pipeline
+│   └── mlp_utils_lo.py               # Lo MLP pipeline
+├── README.md
+└── requirements.txt
 ```
- 
+
+---
+
+## How to run
+
+### 1. Classical model training
+
+```bash
+python training/train_model.py \
+          --config <path/to/config.yaml>
+```
+
+Optional flags: `--folds 1 2` (subset of outer folds), `--dry-run` (validate
+config without running).
+
+A YAML config controls dataset, task, fingerprint, model, hyperparameter
+search space, inner split protocol, and artifact settings. Outputs go to
+`results/`; fingerprint caches go to `features/`.
+
+### 2. MLP experiments
+
+MLP experiments are implemented as Jupyter notebooks under `notebooks/mlp/`,
+one per dataset × fingerprint combination. Run them in Jupyter or JupyterLab.
+
+### 3. Analysis notebooks
+
+Run in order — each `_plots` notebook loads tables already produced by the
+preceding computation notebook:
+
+1. Run training scripts to produce baseline results.
+2. `notebooks/hi_ood_vs_random_cross_dataset/01-cross_dataset_tables_hi.ipynb`
+3. `notebooks/hi_ood_vs_random_cross_dataset/02_cross_dataset_plots_hi.ipynb`
+4. `notebooks/distribution_shift_analysis/classifier_shift_test_all_hi.ipynb`
+5. `notebooks/distribution_shift_analysis/classifier_shift_test_all_hi_plots.ipynb`
+6. `notebooks/tanimoto_distance_analysis/fold_distance_tanimoto.ipynb`
+7. `notebooks/tanimoto_distance_analysis/fold_distance_tanimoto_plots.ipynb`
+
+---
+
+## Important methodological notes
+
+- **KDR-Hi** is excluded from the OOD-vs-random cross-dataset comparison (its
+  ~500-molecule outer training folds make fold reconstruction non-comparable),
+  but is included in the general benchmark results.
+- **ECFP4** fingerprints use 2048 bits. Invalid SMILES are removed, not
+  replaced by dummy molecules.
+- **Tanimoto SVM** is restricted to binary fingerprints (ECFP4, MACCS).
+- **Feature importance:** DT uses permutation importance (clipped at zero);
+  LR/SVM use absolute coefficients.
+- **Outer test folds** remain untouched during model selection. Random shuffle
+  validation fraction is matched to OOD holdout size.
+- **Complete pairwise Tanimoto distance** is the main fold-distance metric.
+  Random-bit baselines (30 repeats) control for top-k dimensionality effects.
+- **OOD-vs-random applies only to Hi.** Lo folds are organized by cluster
+  membership, not chemical dissimilarity, so the OOD holdout reconstruction
+  does not apply.
+
+---
+
+## Papers
+
+* **[Lo-Hi: Practical ML Drug Discovery Benchmark](https://arxiv.org/abs/2310.06399)**
+  Reference benchmark for this project; introduces the Hi/Lo drug-discovery tasks and the Lo-Hi splitting strategy.
+
+* **[MoleculeNet: A Benchmark for Molecular Machine Learning](https://pubs.rsc.org/en/content/articlelanding/2018/sc/c7sc02664a)**
+  General reference for molecular property prediction benchmarks, datasets, metrics and molecular featurizations.
+
+* **[Real-World Molecular Out-Of-Distribution: Specification and Investigation](https://pubs.acs.org/doi/10.1021/acs.jcim.3c01774)**
+  Reference for molecular OOD generalization and realistic distribution-shift evaluation in drug discovery.
+
+* **[Evaluating Machine Learning Models for Molecular Property Prediction: Performance and Robustness on Out-of-Distribution Data](https://pubs.acs.org/doi/10.1021/acs.jcim.5c00475)**
+  Recent molecular-property prediction study comparing ID/OOD robustness across models and splitting strategies.
+
+* **[Accuracy on the Line: On the Strong Correlation Between Out-of-Distribution and In-Distribution Generalization](https://arxiv.org/abs/2107.04649)**
+  Reference for the idea that ID and OOD performance can be strongly correlated, explaining why a more realistic validation estimate may not always improve model selection.
+
+* **[Accuracy on the Wrong Line: On the Pitfalls of Noisy Data for Out-of-Distribution Generalisation](https://proceedings.mlr.press/v258/sanyal25a.html)**
+  Follow-up work on when the ID/OOD correlation breaks, especially under nuisance features, noise or shortcut-driven shifts.
+
+* **[A Theory of Learning from Different Domains](https://link.springer.com/article/10.1007/s10994-009-5152-4)**
+  Foundational domain-adaptation theory paper connecting source/target performance to distribution divergence.
+
+* **[Detecting Change in Data Streams](https://www.vldb.org/conf/2004/RS5P1.PDF)**
+  Foundational reference for statistically detecting and quantifying distributional change.
+
+* **[CoDrug: Conformal Drug Property Prediction with Density Estimation under Covariate Shift](https://proceedings.neurips.cc/paper_files/paper/2023/hash/7691484a7a35d5e2742279c1d926b778-Abstract-Conference.html)**
+  Reference for covariate-shift handling in drug-property prediction using conformal prediction and density estimation.
+
+* **[SIMPD: an Algorithm for Generating Simulated Time Splits for Validating Machine Learning Approaches](https://link.springer.com/article/10.1186/s13321-023-00787-9)**
+  Reference for controlled molecular splitting strategies that better approximate realistic medicinal-chemistry validation settings.
+
+* **[Scaffold Splits Overestimate Virtual Screening Performance](https://arxiv.org/abs/2406.00873)**
+  Shows that scaffold splits can still overestimate virtual-screening performance, motivating more careful structural-shift evaluation.
+
+* **[Exposing the Limitations of Molecular Machine Learning with Activity Cliffs](https://pubs.acs.org/doi/10.1021/acs.jcim.2c01073)**
+  Reference for activity cliffs and the limitations of molecular ML when small structural changes induce large activity changes.
+
 ---
 
 ## Installation
 
-The code requires Python 3.10 or newer. A CUDA-capable GPU is recommended
-for the MLP notebooks but not required for the classical models in
-`training/train_model.py`.
+Python 3.10 or newer. A CUDA-capable GPU is recommended for MLP notebooks but
+not required for classical models.
+
+```bash
+pip install -r requirements.txt
+```
 
 If you need a specific CUDA build of PyTorch, install it explicitly before
-running `pip install -r requirements.txt`.
-
-The experiments in this repository were originally run on a machine equipped
-with two NVIDIA Tesla V100S 32 GB GPUs.
-
----
-
-## Datasets
-
-The dataset folds are not bundled with this repository. They must be obtained
-from the original Lo-Hi benchmark repository
-(<https://github.com/SteshinSS/lohi_neurips2023>) and placed under `data/`
-with the following layout:
-
-```
-data/
-├── hi/
-│   ├── drd2/{train,test}_{1,2,3}.csv
-│   ├── hiv/{train,test}_{1,2,3}.csv
-│   ├── kdr/{train,test}_{1,2,3}.csv
-│   └── sol/{train,test}_{1,2,3}.csv
-└── lo/
-    ├── drd2/{train,test}_{1,2,3}.csv
-    ├── kcnh2/{train,test}_{1,2,3}.csv
-    └── kdr/{train,test}_{1,2,3}.csv
-```
-
-Each CSV file contains a `smiles` column, a `value` column (binary for Hi,
-continuous for Lo) and, for Lo only, a `cluster` column identifying the
-cluster of each test molecule.
-
----
-
-## Running experiments
-
-### 1. Classical machine learning models
-
-Classical models (KNN, SVM, Logistic / Linear Regression, Decision Tree,
-Random Forest, Gradient Boosting, XGBoost, dummy baseline) are trained from
-the command line through `training/train_model.py`, which reads a YAML
-configuration file describing the experiment.
-
-```bash
-python training/train_model.py \
-    --config configs/hi/drd2/svm/svm_ecfp4_drd2_hi.yaml
-```
-
-Optional arguments:
-
-```bash
-# Run only a subset of the outer folds
-python training/train_model.py --config <path> --folds 1 2
-
-# Validate the configuration without running anything
-python training/train_model.py --config <path> --dry-run
-```
-
-A YAML config has the following structure:
-
-```yaml
-experiment:
-  name: svm_ecfp4_drd2_hi
-  task: hi               # "hi" or "lo"
-  dataset: drd2          # drd2, hiv, kdr, sol, kcnh2
-
-fingerprint:
-  type: ecfp4            # ecfp4, maccs, rdkit_topo, rdkit_desc
-
-model:
-  name: svm              # knn, svm, gb, rf, lr, linreg, dt, dummy, xgb
-  fixed:
-    kernel: rbf
-    probability: true
-  search:
-    C: [0.1, 0.5, 1.0, 2.0, 5.0]
-    gamma: [scale, auto]
-
-cv:
-  inner_k: 3
-  scoring: average_precision
-  search_strategy: grid   # "grid" or "random"
-  n_iter: 50              # only used when search_strategy == "random"
-  random_state: 42
-```
-
-For each outer fold the pipeline featurizes the training and test molecules
-(or loads cached fingerprints from `features/`), runs the inner
-cross-validation on the training partition only to select hyperparameters,
-refits the best estimator on the full training partition and evaluates it on
-the test partition. Predictions and per-fold best hyperparameters are saved
-under `results/{task}/{dataset}/{model_fp}/`.
-
-### 2. Multi-layer perceptron experiments
-
-The MLP experiments are implemented as Jupyter notebooks under `notebooks/`,
-one per dataset × fingerprint combination, for example:
-
-- `notebooks/mlp_drd2_hi_ecfp4.ipynb`
-- `notebooks/mlp_drd2_hi_rdkit.ipynb`
-- `notebooks/mlp_drd2_lo_ecfp4.ipynb`
-- `notebooks/mlp_kcnh2_lo_rdkit.ipynb`
-- `notebooks/mlp_hiv_hi_ecfp4.ipynb`
-- ...
-
-The MLP pipeline is implemented in `utils/mlp_utils.py` for Hi tasks and
-`utils/mlp_utils_lo.py` for Lo tasks. These files include inline comments and
-docstrings explaining the main steps of the pipeline.
-
----
-
-## Evaluation metrics
-
-- **Hi task** — PR-AUC (primary), ROC-AUC, BEDROC (α = 70), F1 at threshold
-  0.5 when applicable, and positive rate for reference. Metrics are
-  aggregated across the three outer folds as mean ± standard deviation.
-
-- **Lo task** — Mean Spearman rank correlation computed inside each test
-  cluster of structurally similar molecules and then averaged across
-  clusters, following the original Lo-Hi benchmark protocol. Mean intra-cluster
-  R² and MAE are also reported as auxiliary metrics. Clusters with fewer
-  than three molecules are skipped.
-
-All metric definitions are in `utils/metrics.py`.
-
----
-
-# Results
-
-## Hi Task (Hit Identification) — PR-AUC 
-
-| Model | DRD2-Hi | HIV-Hi | KDR-Hi | Sol-Hi |
-|---|---:|---:|---:|---:|
-| Dummy | 0.6765 ± 0.0614 | 0.0399 ± 0.0143 | 0.6092 ± 0.0814 | 0.2154 ± 0.0083 |
-| LR (ECFP4) | 0.7743 ± 0.0841 | 0.0714 ± 0.0307 | 0.6603 ± 0.0642 | 0.4813 ± 0.0502 |
-| LR (MACCS) | 0.7327 ± 0.0641 | 0.0988 ± 0.0491 | 0.6018 ± 0.0907 | 0.4740 ± 0.0172 |
-| LR (RDKit Desc.) | 🥇  **0.7922 ± 0.0603** | 0.1123 ± 0.0538 | 0.6450 ± 0.0784 | 🥈 **0.5955 ± 0.0246** |
-| KNN (ECFP4) | 0.7078 ± 0.0486 | 0.0656 ± 0.0261 | 0.6473 ± 0.0812 | 0.4466 ± 0.0300 |
-| KNN (MACCS) | 0.7100 ± 0.0496 | 0.0717 ± 0.0335 | 0.6284 ± 0.0886 | 0.4264 ± 0.0341 |
-| DT (ECFP4) | 0.7145 ± 0.0712 | 0.0450 ± 0.0140 | 0.6421 ± 0.0252 | 0.3298 ± 0.0220 |
-| DT (MACCS) | 0.6872 ± 0.0481 | 0.0682 ± 0.0353 | 0.6302 ± 0.0903 | 0.3317 ± 0.0283 |
-| SVM Linear (ECFP4) | 0.7732 ± 0.0876 | 0.0623 ± 0.0315 | 0.6498 ± 0.0788 | 0.4791 ± 0.0645 |
-| SVM Linear (MACCS) | 0.7293 ± 0.0561 | 0.1125 ± 0.0510 | 0.5824 ± 0.0854 | 0.4766 ± 0.0191 |
-| SVM Poly (ECFP4) | 0.7454 ± 0.0869 | 0.0851 ± 0.0405 | 0.6104 ± 0.1532 | 0.5021 ± 0.0442 |
-| SVM Poly (MACCS) | 0.7326 ± 0.0463 | 0.1058 ± 0.0530 | 0.5960 ± 0.1101 | 0.4671 ± 0.0369 |
-| SVM Poly (RDKit Desc.) | 🥉 **0.7750 ± 0.0615** | 0.0840 ± 0.0397 | 🥇  **0.6744 ± 0.0608** | 0.5781 ± 0.0244 |
-| SVM RBF (ECFP4) | 0.7728 ± 0.0790 | 0.0953 ± 0.0426 | 🥉 **0.6690 ± 0.0249** | 0.4916 ± 0.0513 |
-| SVM RBF (MACCS) | 0.7321 ± 0.0477 | 0.1101 ± 0.0580 | 0.6178 ± 0.0534 | 0.4729 ± 0.0368 |
-| SVM RBF (RDKit Desc.) | 0.7574 ± 0.0609 | 0.1020 ± 0.0505 | 0.6547 ± 0.0627 | 🥉 **0.5875 ± 0.0431** |
-| SVM Tanimoto (ECFP4) | 0.7745 ± 0.0782 | 0.0827 ± 0.0331 | 🥈 **0.6723 ± 0.0436** | 0.4849 ± 0.0473 |
-| SVM Tanimoto (MACCS) | 0.7319 ± 0.0498 | 0.0966 ± 0.0468 | 0.5829 ± 0.0815 | 0.4747 ± 0.0400 |
-| RF (ECFP4) | 0.7471 ± 0.0646 | 0.1105 ± 0.0624 | 0.6547 ± 0.0701 | 0.4824 ± 0.0391 |
-| RF (MACCS) | 0.7238 ± 0.0516 | 🥉 **0.1348 ± 0.0766** | 0.6125 ± 0.0772 | 0.4646 ± 0.0263 |
-| RF (RDKit Desc.) | 0.7671 ± 0.0689 | 🥈 **0.1491 ± 0.1148** | 0.6556 ± 0.0574 | 0.5476 ± 0.0301 |
-| GB (ECFP4) | 0.7450 ± 0.0835 | 0.1053 ± 0.0560 | 0.6642 ± 0.0604 | 0.4680 ± 0.0199 |
-| GB (MACCS) | 0.7419 ± 0.0639 | 0.1186 ± 0.0604 | 0.5891 ± 0.0938 | 0.4853 ± 0.0450 |
-| GB (RDKit Desc.) | 🥈 **0.7809 ± 0.0565** | 🥇  **0.1511 ± 0.0805** | 0.6562 ± 0.0608 | 0.5691 ± 0.0178 |
-| XGBoost (ECFP4) | 0.7552 ± 0.0853 | 0.0972 ± 0.0463 | 0.6255 ± 0.0662 | 0.4858 ± 0.0253 |
-| XGBoost (MACCS) | 0.7376 ± 0.0643 | 0.1142 ± 0.0653 | 0.6214 ± 0.0836 | 0.5025 ± 0.0264 |
-| XGBoost (RDKit Desc.) | 0.7726 ± 0.0479 | 0.1199 ± 0.0695 | 0.6615 ± 0.0734 | 0.5656 ± 0.0197 |
-| MLP (ECFP4) | 0.7689 ± 0.0803 | 0.0663 ± 0.0220 | 0.6403 ± 0.0468 | 0.4575 ± 0.0254 |
-| MLP (RDKit Desc.) | 0.7621 ± 0.0748 | 0.1044 ± 0.0457 | 0.6291 ± 0.0886 | 🥇  **0.5972 ± 0.0260** |
-
----
-
-## Lo Task (Lead Optimization) — Mean Spearman 
-
-| Model | DRD2-Lo | KCNH2-Lo | KDR-Lo |
-|---|---:|---:|---:|
-| Dummy | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 | 0.0000 ± 0.0000 |
-| LinReg (ECFP4) | 0.0968 ± 0.0494 | 0.1795 ± 0.0198 | 0.0214 ± 0.0704 |
-| LinReg (MACCS) | 0.1315 ± 0.0390 | 0.1222 ± 0.0048 | 0.0540 ± 0.0866 |
-| LinReg (RDKit Desc.) | 0.2046 ± 0.0175 | 0.3765 ± 0.0093 | 0.1049 ± 0.0711 |
-| KNN (ECFP4) | 0.2188 ± 0.0323 | 0.1903 ± 0.0505 | 0.0787 ± 0.0490 |
-| KNN (MACCS) | 0.1478 ± 0.0421 | 0.1618 ± 0.0329 | 0.0376 ± 0.0113 |
-| DT (ECFP4) | 0.1500 ± 0.0541 | 0.1696 ± 0.0664 | 0.0083 ± 0.0351 |
-| DT (MACCS) | 0.0353 ± 0.0348 | 0.0460 ± 0.0011 | 0.0292 ± 0.0815 |
-| SVM Linear (ECFP4) | 0.1299 ± 0.0170 | 0.2113 ± 0.0127 | 0.0957 ± 0.0127 |
-| SVM Linear (MACCS) | 0.1300 ± 0.0562 | 0.1479 ± 0.0113 | −0.0067 ± 0.0471 |
-| SVM Poly (ECFP4) | 0.2286 ± 0.0264 | 🥉 **0.4426 ± 0.0235** | 0.1371 ± 0.0189 |
-| SVM Poly (MACCS) | 0.2301 ± 0.0353 | 0.0797 ± 0.0094 | 0.0982 ± 0.0064 |
-| SVM Poly (RDKit Desc.) | 0.2695 ± 0.0350 | 0.3657 ± 0.0130 | 0.0738 ± 0.0247 |
-| SVM RBF (ECFP4) | 0.1734 ± 0.0082 | 🥈 **0.4453 ± 0.0205** | 0.1273 ± 0.0204 |
-| SVM RBF (MACCS) | 0.2483 ± 0.0224 | 0.1335 ± 0.0244 | 0.0651 ± 0.0171 |
-| SVM RBF (RDKit Desc.) | 0.2021 ± 0.0195 | 0.0170 ± 0.0275 | 0.1391 ± 0.0179 |
-| SVM Tanimoto (ECFP4) | 0.1820 ± 0.0131 | 0.3919 ± 0.0137 | 0.1398 ± 0.0153 |
-| SVM Tanimoto (MACCS) | 0.2480 ± 0.0418 | 0.1186 ± 0.0202 | 0.0575 ± 0.0330 |
-| RF (ECFP4) | 🥇  **0.3188 ± 0.0255** | 0.3458 ± 0.0263 | 0.1070 ± 0.0207 |
-| RF (MACCS) | 0.1878 ± 0.0388 | 0.1598 ± 0.0208 | 0.1227 ± 0.0491 |
-| RF (RDKit Desc.) | 0.2141 ± 0.0222 | 0.4127 ± 0.0421 | 🥇  **0.1691 ± 0.0268** |
-| GB (ECFP4) | 0.2660 ± 0.0362 | 0.4008 ± 0.0272 | 0.0748 ± 0.0098 |
-| GB (MACCS) | 0.2015 ± 0.0298 | 0.1914 ± 0.0251 | 0.1184 ± 0.0146 |
-| GB (RDKit Desc.) | 0.1742 ± 0.0538 | 0.3914 ± 0.0553 | 🥈 **0.1527 ± 0.0456** |
-| XGBoost (ECFP4) | 🥈 **0.2943 ± 0.0530** | 0.4188 ± 0.0100 | 0.0715 ± 0.0102 |
-| XGBoost (MACCS) | 0.1967 ± 0.0240 | 0.1358 ± 0.0558 | 0.0853 ± 0.0526 |
-| XGBoost (RDKit Desc.) | 0.2314 ± 0.0809 | 🥇  **0.4508 ± 0.0287** | 0.1434 ± 0.0268 |
-| MLP (ECFP4) | 🥉 **0.2757 ± 0.0406** | 0.3970 ± 0.0188 | 🥉 **0.1507 ± 0.0293** |
-| MLP (RDKit Desc.) | 0.2732 ± 0.0248 | 0.4147 ± 0.0551 | 0.1098 ± 0.0167 |
-
----
-
-## OOD vs in-distribution validation — Hi task
-
-### Motivation and research questions
-
-The Hi task requires models to generalize to molecules that are structurally
-dissimilar from anything seen during training (Tanimoto ECFP4 < 0.4). Standard
-nested cross-validation selects hyperparameters using a random inner validation
-split, where the validation molecules may be chemically similar to the inner
-training molecules. The concern is concrete: a model validated on its own
-chemical neighborhood might look much better internally than it actually is on
-truly novel structures, and might be guided toward higher capacity and weaker
-regularization precisely because those configurations are better at memorizing
-local patterns.
-
-The analysis investigates five questions. First, whether the inner-to-test
-optimism gap (inner PR-AUC − final OOD test PR-AUC) is systematically larger
-with random shuffle validation. Second, whether random shuffle selects more
-complex models — deeper and larger trees, linear models with larger coefficient
-norms and less sparsity, SVMs with weaker regularization. Third, whether the
-two protocols select models that rely on different features, measured as top-k
-feature overlap. Fourth, whether random shuffle leads to less reproducible
-feature rankings across the three outer folds. Fifth, whether these effects
-are consistent across molecular targets and fingerprint types or are
-dataset-specific.
-
-### Protocol design
-
-The benchmark fold structure provides a natural OOD inner holdout without any
-new splitting logic. The three Hi subsets F1, F2, F3 are mutually dissimilar
-by construction, and since `train_i = Fⱼ ∪ Fₖ`, the two constituent subsets
-can be recovered exactly from the test files of the other outer folds. For
-outer fold 1, for example, `inner_train = test_3.csv = F1` and `inner_val =
-test_2.csv = F2` — two chemically distinct groups, with no leakage since the
-only forbidden file for fold 1 is `test_1.csv`. The random shuffle protocol
-takes the same outer training set, shuffles it, and splits it 80/20 with
-stratification. In both cases `GridSearchCV(refit=True)` with `PredefinedSplit`
-ensures the selected model is always refitted on the full outer training set
-before test evaluation.
-
-### Analysis structure and plots
-
-The comparison is organized into six notebooks per dataset, covering three
-levels of analysis.
-
-**Protocol-level performance** (notebooks 01–02). The key figure is a scatter
-plot of mean inner validation PR-AUC against mean final OOD test PR-AUC, with
-the identity diagonal separating well-calibrated from optimistic protocols.
-Complementary figures show the optimism gap over the three outer folds per
-model, and a delta heatmap summarizing the differences across all four metrics
-(inner score, test score, inner-test gap, train-test gap) for all model and
-fingerprint combinations.
-
-**Model complexity** (notebooks 03–04). Strip plots with fold-level points
-show how the key complexity indicator per model family — number of nodes for
-Decision Tree, L2 norm of the coefficient vector for Logistic Regression and
-SVM — distributes across fingerprints and protocols. Scatter plots relate
-complexity directly to the optimism gap, and a log-ratio heatmap shows which
-hyperparameters (C, ccp_alpha, L2 norm, sparsity, margin) are systematically
-higher or lower under random shuffle. A three-stage line plot connecting Train,
-Inner val, and OOD test PR-AUC for every fold makes the drop pattern
-immediately visible.
-
-**Feature-level explainability** (notebooks 05–06). Barplots show the mean
-top-k overlap between features selected by the two protocols, with individual
-fold values as scatter points. A single stability heatmap summarizes
-intra-protocol feature consistency across fold pairs for all model and
-fingerprint combinations. Cumulative importance curves reveal whether
-importance is concentrated on few features or spread across many. For Decision
-Trees, depth distribution plots show how deep the most important features
-appear in the tree. Finally, side-by-side local contribution plots compare
-the feature-level evidence produced by the two protocols for the same test
-molecules, focusing on cases where the protocols disagree.
-
-### Results
-
-The effect of the validation protocol on final OOD test PR-AUC is strongly
-dataset-dependent. On KDR-Hi, OOD holdout outperforms random shuffle by 15–35
-percentage points across all models and fingerprints — the sharpest example of
-in-distribution validation being actively misleading. On DRD2-Hi the effect is
-model-dependent, with OOD holdout better for Decision Tree and the picture
-mixed for linear models. On HIV-Hi and Sol-Hi the differences are small and
-inconsistent in direction, suggesting the severity of the effect scales with
-the chemical dissimilarity between inner validation and final test.
-
-#### DRD2-Hi
-
-| Model + Fingerprint | OOD holdout | Random shuffle |
-|---|---:|---:|
-| DT + ECFP4 | **0.7164 ± 0.0470** | 0.7115 ± 0.0768 |
-| DT + MACCS | 0.6802 ± 0.0682 | **0.7047 ± 0.1020** |
-| LR + ECFP4 | 0.7572 ± 0.0996 | **0.7677 ± 0.1101** |
-| LR + MACCS | **0.7461 ± 0.0920** | 0.7414 ± 0.0934 |
-| LR + RDKit desc | **0.7883 ± 0.0809** | 0.7874 ± 0.0750 |
-| SVM + ECFP4 | 0.7532 ± 0.1090 | **0.7678 ± 0.1047** |
-| SVM + MACCS | 0.7394 ± 0.0784 | **0.7418 ± 0.0745** |
-
-#### HIV-Hi
-
-| Model + Fingerprint | OOD holdout | Random shuffle |
-|---|---:|---:|
-| DT + ECFP4 | 0.0467 ± 0.0253 | **0.0559 ± 0.0333** |
-| DT + MACCS | **0.0778 ± 0.0626** | 0.0623 ± 0.0334 |
-| LR + ECFP4 | 0.0577 ± 0.0241 | **0.0714 ± 0.0375** |
-| LR + MACCS | **0.1129 ± 0.0775** | 0.0998 ± 0.0588 |
-| LR + RDKit desc | 0.0885 ± 0.0473 | **0.1138 ± 0.0665** |
-| SVM + ECFP4 | 0.0532 ± 0.0198 | **0.0578 ± 0.0293** |
-| SVM + MACCS | 0.1034 ± 0.0532 | **0.1037 ± 0.0521** |
-
-#### KDR-Hi
-
-| Model + Fingerprint | OOD holdout | Random shuffle |
-|---|---:|---:|
-| DT + ECFP4 | **0.9423 ± 0.0311** | 0.6122 ± 0.1041 |
-| DT + MACCS | **0.9456 ± 0.0089** | 0.6199 ± 0.0787 |
-| LR + ECFP4 | **0.9563 ± 0.0109** | 0.6469 ± 0.0728 |
-| LR + MACCS | **0.8431 ± 0.0374** | 0.6046 ± 0.1205 |
-| LR + RDKit desc | **0.8776 ± 0.0295** | 0.6389 ± 0.0984 |
-| SVM + ECFP4 | **0.9440 ± 0.0093** | 0.6005 ± 0.1074 |
-| SVM + MACCS | **0.8339 ± 0.0371** | 0.5977 ± 0.1310 |
-
-#### Sol-Hi
-
-| Model + Fingerprint | OOD holdout | Random shuffle |
-|---|---:|---:|
-| DT + ECFP4 | **0.3038 ± 0.0129** | 0.3035 ± 0.0382 |
-| DT + MACCS | **0.3326 ± 0.0165** | 0.3158 ± 0.0418 |
-| LR + ECFP4 | 0.4778 ± 0.0493 | **0.4915 ± 0.0441** |
-| LR + MACCS | 0.4768 ± 0.0210 | **0.4787 ± 0.0226** |
-| LR + RDKit desc | **0.5908 ± 0.0406** | 0.5876 ± 0.0233 |
-| SVM + ECFP4 | 0.4968 ± 0.0384 | **0.5004 ± 0.0433** |
-| SVM + MACCS | **0.4756 ± 0.0176** | 0.4753 ± 0.0234 |
-
----
-
-## OOD vs in-distribution validation — Lo task
-
-The same OOD holdout strategy cannot be applied to Lo. Hi folds are
-constructed around global chemical dissimilarity, F1, F2, F3 are mutually
-dissimilar subsets,  which is exactly what makes the fold reconstruction work.
-Lo folds are organized around clusters of chemical analogues: the split
-criterion is cluster membership, not pairwise molecular distance, so the test
-files of other outer folds are not chemically separated from the training set
-in the same meaningful sense. Using them as an inner OOD holdout for Lo would
-not replicate the right generalization scenario.
-
-The code blocks the holdout strategy for Lo explicitly, with a ValueError that
-suggests either `kfold` or `random_shuffle`, or a future cluster-aware holdout
-where entire clusters of analogues are held out during inner validation — an
-experiment that would need its own careful design around cluster sizes and the
-intra-cluster Spearman evaluation protocol.
-
-
-## Important papers to study
- 
-**Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena", NeurIPS 2023.**
-
-
-**Kifer, Ben-David, Gehrke, "Detecting Change in Data Streams", Cornell University.**
-
- 
-**Ben-David, Blitzer, Crammer, Kulesza, Pereira, Vaughan, "A Theory of Learning
-from Different Domains".**
-
-## Next steps
- 
-**Evaluate and implement the LLM audit.** The infrastructure for building
-structured judge cases is already in place in `utils/llm_audit/`. The natural
-next step is to implement `02_run_llm_judge_drd2_hi.ipynb`, run a pilot audit
-on DRD2-Hi with a small case set, and evaluate whether the LLM plausibility
-judgements are internally consistent and correlate with the quantitative
-metrics from the OOD vs in-distribution analysis.
- 
-**Study Kifer et al. and Ben-David et al. and integrate them into the analysis.**
-The two distribution shift papers provide the theoretical language to
-describe what the OOD vs in-distribution experiments are actually measuring.
-Concretely, this means quantifying the distribution shift between the inner
-validation set and the outer test set for each dataset and protocol, and
-testing whether the magnitude of that shift predicts the size of the optimism
-gap. KDR-Hi is the most extreme case and would be a good starting point.
- 
-**Extend the analysis to graph neural networks.** 
-
----
-
-## Use of large language models
-
-Anthropic's Claude was used during the development of this repository,
-mainly to refactor exploratory code into a more modular and professional
-structure (Claude Sonnet 4.6), and to assist with debugging (Claude Opus 4.6).
+running `pip install`.
 
 ---
 
 ## License
 
-The datasets are released under the MIT license by the authors of the
-original Lo-Hi benchmark. Code in this repository is also released under the
-MIT license unless otherwise noted.
-
----
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- ## Citation
-
-If you use this repository or the Lo-Hi benchmark in your work, please cite
-the original paper:
-
-```bibtex
-@inproceedings{steshin2023lohi,
-  title     = {Lo-Hi: Practical ML Drug Discovery Benchmark},
-  author    = {Steshin, Simon},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS),
-               Datasets and Benchmarks Track},
-  year      = {2023},
-  url       = {https://openreview.net/forum?id=H2Yb28qGLV}
-}
-``` -->
+The datasets are released under the MIT license by the authors of the original
+Lo-Hi benchmark. Code in this repository is also released under the MIT
+license.
