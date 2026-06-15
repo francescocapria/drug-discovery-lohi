@@ -18,24 +18,25 @@ logger = logging.getLogger(__name__)
 
 DEFAULTS = {
     "cv": {
-        "inner_k": 3,
+        "inner_k": 2,
         "scoring": "average_precision",
         "search_strategy": "grid",
         "n_iter": 50,
         "random_state": 42,
-        "inner_split_strategy": "kfold",       # "kfold" | "holdout" | "random_shuffle"
-        "holdout_val_fraction": 0.2,            # only with random_shuffle
+        "inner_split_strategy": "kfold",  # "kfold" | "holdout" | "random_shuffle"
+        "holdout_val_fraction": 0.2,  # only with random_shuffle
     },
     "artifacts": {
         "save_model": False,
         "save_complexity": False,
         "save_feature_importance": False,
         "save_cv_results": False,
-    }
+    },
 }
 
 
 # Config loader
+
 
 def load_config(config_path: str) -> Dict[str, Any]:
     """
@@ -126,4 +127,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 def config_to_experiment_id(cfg: Dict[str, Any]) -> str:
     """Generate a unique experiment ID from config."""
     exp = cfg["experiment"]
-    return exp.get("name", f"{cfg['model']['name']}_{cfg['fingerprint']['type']}_{exp['dataset']}_{exp['task']}")
+    return exp.get(
+        "name",
+        f"{cfg['model']['name']}_{cfg['fingerprint']['type']}_{exp['dataset']}_{exp['task']}",
+    )
