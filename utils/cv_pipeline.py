@@ -2,7 +2,7 @@
 Nested cross-validation pipeline for the Lo-Hi benchmark.
 
 The pipeline uses the three predefined Lo-Hi outer folds. For each outer fold, hyperparameters are selected using only the corresponding outer training set,
-and the final fitted model is evaluated once on the held-out outer test set. 
+and the final fitted model is evaluated once on the held-out outer test set.
 
 Supported inner-selection strategies:
 
@@ -28,7 +28,7 @@ molecules and cannot be reconstructed as the union of the two non-test Lo-Hi sub
 
 Feature importance:
 
-* Decision Trees use permutation importance as the primary feature ranking, computed post-hoc on a held-out evaluation set, usually the outer test fold.
+* Decision Trees use tree importance as the primary feature ranking, computed post-hoc on a held-out evaluation set, usually the outer test fold.
   Native sklearn impurity-based importance is still saved only as a diagnostic.
 * Logistic Regression and Linear SVM use coefficient-based rankings, based on the absolute value of the learned weights. Signed coefficients are also saved
   to preserve directionality.
@@ -72,8 +72,8 @@ logger = logging.getLogger(__name__)
 
 
 # Default permutation-importance settings (can be overridden via kwargs)
-DEFAULT_PERM_N_REPEATS = 10 # Number of times each feature is shuffled
-DEFAULT_PERM_N_JOBS = -1 
+DEFAULT_PERM_N_REPEATS = 10  # Number of times each feature is shuffled
+DEFAULT_PERM_N_JOBS = -1
 
 
 # Artifact utilities
@@ -154,15 +154,17 @@ def _tree_minimum_depths(tree_model: BaseEstimator, n_features: int) -> Dict[int
     min_depth = {}
 
     stack = [(0, 0)]  # (node_id, depth)
-    while stack: # for every node in the tree
+    while stack:  # for every node in the tree
         node_id, depth = stack.pop()
         feat_idx = int(feature[node_id])
 
-        if feat_idx >= 0: # it's not a leaf, but a split
+        if feat_idx >= 0:  # it's not a leaf, but a split
             if feat_idx not in min_depth:
                 min_depth[feat_idx] = depth
             else:
-                min_depth[feat_idx] = min(min_depth[feat_idx], depth) # I keep only the min distance from the root
+                min_depth[feat_idx] = min(
+                    min_depth[feat_idx], depth
+                )  # I keep only the min distance from the root
 
             left = children_left[node_id]
             right = children_right[node_id]
@@ -216,12 +218,14 @@ def _extract_complexity_metrics(
     }
 
     # Linear models: Logistic Regression, Linear SVM, LinearRegression, etc.
-    # 
+    #
     if hasattr(base_model, "coef_"):
         coef = np.asarray(base_model.coef_)
 
         if coef.ndim > 1:
-            coef_flat = coef.ravel() # If coef_ is multidimensional, flatten it, we want (n_features,) not (1, n_features))
+            coef_flat = (
+                coef.ravel()
+            )  # If coef_ is multidimensional, flatten it, we want (n_features,) not (1, n_features))
         else:
             coef_flat = coef
 
@@ -230,15 +234,23 @@ def _extract_complexity_metrics(
         l1_norm = float(np.sum(abs_coef))
         l2_norm = float(np.linalg.norm(coef_flat, ord=2))
 
-        complexity.update({
-            "coefficient_shape": list(coef.shape),
-            "n_coefficients": int(coef_flat.shape[0]),
-            "n_nonzero_coefficients": nonzero,
-            "sparsity": float(1.0 - nonzero / coef_flat.shape[0]) if coef_flat.shape[0] > 0 else None, # If I have 1024 features and 200 coef -->  sparsity = 1 - 200/1024 = 0.805
-            "l1_norm": l1_norm,
-            "l2_norm": l2_norm,
-            "approx_margin": float(1.0 / l2_norm) if l2_norm > 0 else None, # Principally for svm 
-        })
+        complexity.update(
+            {
+                "coefficient_shape": list(coef.shape),
+                "n_coefficients": int(coef_flat.shape[0]),
+                "n_nonzero_coefficients": nonzero,
+                "sparsity": (
+                    float(1.0 - nonzero / coef_flat.shape[0])
+                    if coef_flat.shape[0] > 0
+                    else None
+                ),  # If I have 1024 features and 200 coef -->  sparsity = 1 - 200/1024 = 0.805
+                "l1_norm": l1_norm,
+                "l2_norm": l2_norm,
+                "approx_margin": (
+                    float(1.0 / l2_norm) if l2_norm > 0 else None
+                ),  # Principally for svm
+            }
+        )
 
         if hasattr(base_model, "intercept_"):
             intercept = np.asarray(base_model.intercept_).ravel()
@@ -273,16 +285,22 @@ def _extract_complexity_metrics(
     # Decision Tree metrics
     if hasattr(base_model, "tree_"):
         tree = base_model.tree_
-        used_features = tree.feature[tree.feature >= 0] # only split nodes
+        used_features = tree.feature[tree.feature >= 0]  # only split nodes
         unique_used_features = np.unique(used_features)
 
-        complexity.update({
-            "effective_depth": int(base_model.get_depth()),
-            "n_nodes": int(tree.node_count),
-            "n_leaves": int(base_model.get_n_leaves()),
-            "n_features_used": int(len(unique_used_features)),
-            "used_feature_fraction": float(len(unique_used_features) / n_features) if n_features > 0 else None,
-        })
+        complexity.update(
+            {
+                "effective_depth": int(base_model.get_depth()),
+                "n_nodes": int(tree.node_count),
+                "n_leaves": int(base_model.get_n_leaves()),
+                "n_features_used": int(len(unique_used_features)),
+                "used_feature_fraction": (
+                    float(len(unique_used_features) / n_features)
+                    if n_features > 0
+                    else None
+                ),
+            }
+        )
 
         for attr in [
             "criterion",
@@ -339,7 +357,7 @@ def _extract_feature_importance(
     base_model = _extract_model_from_pipeline(fitted_model)
     feature_names = _get_feature_names(fp_type, n_features)
 
-    # Linear model coefficients  
+    # Linear model coefficients
     if hasattr(base_model, "coef_"):
         coef = np.asarray(base_model.coef_)
 
@@ -360,18 +378,20 @@ def _extract_feature_importance(
         else:
             normalized = np.zeros_like(abs_weight)
 
-        df = pd.DataFrame({
-            "feature_idx": np.arange(coef_flat.shape[0], dtype=int),
-            "feature_name": feature_names,
-            "raw_weight": coef_flat.astype(float),
-            "abs_weight": abs_weight.astype(float),
-            "normalized_abs_importance": normalized.astype(float),
-        })
+        df = pd.DataFrame(
+            {
+                "feature_idx": np.arange(coef_flat.shape[0], dtype=int),
+                "feature_name": feature_names,
+                "raw_weight": coef_flat.astype(float),
+                "abs_weight": abs_weight.astype(float),
+                "normalized_abs_importance": normalized.astype(float),
+            }
+        )
 
         df["direction"] = np.where(
             df["raw_weight"] > 0,
             "positive",
-            np.where(df["raw_weight"] < 0, "negative", "zero")
+            np.where(df["raw_weight"] < 0, "negative", "zero"),
         )
 
         df = df.sort_values("abs_weight", ascending=False).reset_index(drop=True)
@@ -385,17 +405,15 @@ def _extract_feature_importance(
         importance = np.asarray(base_model.feature_importances_)
         min_depths = _tree_minimum_depths(base_model, n_features)
 
-        df = pd.DataFrame({
-            "feature_idx": np.arange(n_features, dtype=int),
-            "feature_name": feature_names,
-            "tree_importance": importance.astype(float),
-            "minimum_depth": [
-                min_depths.get(i, np.nan) for i in range(n_features)
-            ],
-            "used_in_tree": [
-                i in min_depths for i in range(n_features)
-            ],
-        })
+        df = pd.DataFrame(
+            {
+                "feature_idx": np.arange(n_features, dtype=int),
+                "feature_name": feature_names,
+                "tree_importance": importance.astype(float),
+                "minimum_depth": [min_depths.get(i, np.nan) for i in range(n_features)],
+                "used_in_tree": [i in min_depths for i in range(n_features)],
+            }
+        )
 
         denom = df["tree_importance"].sum()
         if denom > 0:
@@ -412,10 +430,12 @@ def _extract_feature_importance(
         perm_df = None
         if X_eval is not None and y_eval is not None:
             if perm_scoring is None:
-                perm_scoring = "average_precision" if task == "hi" else "neg_mean_absolute_error"
+                perm_scoring = (
+                    "average_precision" if task == "hi" else "neg_mean_absolute_error"
+                )
             try:
                 perm = permutation_importance(
-                    fitted_model,            # full pipeline: preprocessing applied
+                    fitted_model,  # full pipeline: preprocessing applied
                     X_eval,
                     y_eval,
                     scoring=perm_scoring,
@@ -423,11 +443,17 @@ def _extract_feature_importance(
                     random_state=random_state,
                     n_jobs=perm_n_jobs,
                 )
-                perm_df = pd.DataFrame({
-                    "feature_idx": np.arange(len(perm.importances_mean), dtype=int),
-                    "permutation_importance_mean": perm.importances_mean.astype(float),
-                    "permutation_importance_std": perm.importances_std.astype(float),
-                })
+                perm_df = pd.DataFrame(
+                    {
+                        "feature_idx": np.arange(len(perm.importances_mean), dtype=int),
+                        "permutation_importance_mean": perm.importances_mean.astype(
+                            float
+                        ),
+                        "permutation_importance_std": perm.importances_std.astype(
+                            float
+                        ),
+                    }
+                )
                 perm_df["permutation_scoring"] = perm_scoring
                 perm_df["permutation_eval_set"] = eval_set_name
                 perm_df["permutation_n_repeats"] = int(perm_n_repeats)
@@ -504,7 +530,10 @@ def _save_model_artifacts(
             json.dump(_json_safe(complexity), f, indent=2)
         logger.info(f"Saved complexity metrics to {complexity_path}")
 
-    if artifacts.get("save_feature_importance", False) and feature_importance is not None:
+    if (
+        artifacts.get("save_feature_importance", False)
+        and feature_importance is not None
+    ):
         fi_path = result_dir / f"feature_importance_fold_{fold_idx}.csv"
         feature_importance.to_csv(fi_path, index=False)
         logger.info(f"Saved feature importance to {fi_path}")
@@ -517,6 +546,7 @@ def _save_model_artifacts(
 
 
 # Inner CV: hyperparameter search on a single outer fold
+
 
 def _inner_cv_sklearn(
     X_train: np.ndarray,
@@ -532,7 +562,9 @@ def _inner_cv_sklearn(
 ) -> Tuple[BaseEstimator, dict, float, Optional[float], Any]:
 
     if task == "hi":
-        inner_cv = StratifiedKFold(n_splits=inner_k, shuffle=True, random_state=random_state)
+        inner_cv = StratifiedKFold(
+            n_splits=inner_k, shuffle=True, random_state=random_state
+        )
     else:
         inner_cv = KFold(n_splits=inner_k, shuffle=True, random_state=random_state)
         scoring = "neg_mean_absolute_error"
@@ -566,17 +598,26 @@ def _inner_cv_sklearn(
 
     best_train_score = None
     if "mean_train_score" in search.cv_results_:
-        best_train_score = float(search.cv_results_["mean_train_score"][search.best_index_])
+        best_train_score = float(
+            search.cv_results_["mean_train_score"][search.best_index_]
+        )
 
     logger.info(f"  Inner CV best score: {search.best_score_:.4f}")
     logger.info(f"  Inner CV best params: {search.best_params_}")
     if best_train_score is not None:
         logger.info(f"  Inner CV best train score: {best_train_score:.4f}")
 
-    return search.best_estimator_, search.best_params_, search.best_score_, best_train_score, search
+    return (
+        search.best_estimator_,
+        search.best_params_,
+        search.best_score_,
+        best_train_score,
+        search,
+    )
 
 
 # Inner holdout
+
 
 def _inner_holdout_sklearn(
     X_train: np.ndarray,
@@ -607,10 +648,12 @@ def _inner_holdout_sklearn(
     y_all = np.concatenate([y_train, y_val])
 
     # PredefinedSplit: -1 = always in train, 0 = validation fold for split 0
-    test_fold = np.concatenate([
-        -np.ones(len(X_train), dtype=int),
-        np.zeros(len(X_val), dtype=int),
-    ])
+    test_fold = np.concatenate(
+        [
+            -np.ones(len(X_train), dtype=int),
+            np.zeros(len(X_val), dtype=int),
+        ]
+    )
     inner_cv = PredefinedSplit(test_fold)
 
     if task == "hi":
@@ -647,18 +690,26 @@ def _inner_holdout_sklearn(
 
     best_train_score = None
     if "mean_train_score" in search.cv_results_:
-        best_train_score = float(search.cv_results_["mean_train_score"][search.best_index_])
+        best_train_score = float(
+            search.cv_results_["mean_train_score"][search.best_index_]
+        )
 
     logger.info(f"  Inner holdout best score: {search.best_score_:.4f}")
     logger.info(f"  Inner holdout best params: {search.best_params_}")
     if best_train_score is not None:
         logger.info(f"  Inner holdout best train score: {best_train_score:.4f}")
 
-    return search.best_estimator_, search.best_params_, search.best_score_, best_train_score, search
-
+    return (
+        search.best_estimator_,
+        search.best_params_,
+        search.best_score_,
+        best_train_score,
+        search,
+    )
 
 
 # Random shuffle helpers: same train/validation proportion as OOD holdout
+
 
 def _infer_fold_origin_labels(
     train_df: pd.DataFrame,
@@ -717,12 +768,12 @@ def _make_joint_stratify_labels(
     if len(y) != len(fold_origin):
         return None
 
-    labels = np.asarray([
-        f"y={target}|origin={origin}"
-        for target, origin in zip(y, fold_origin)
-    ])
+    labels = np.asarray(
+        [f"y={target}|origin={origin}" for target, origin in zip(y, fold_origin)]
+    )
 
     return labels
+
 
 def _assert_inner_reconstructs_outer_train(
     train_df: pd.DataFrame,
@@ -769,6 +820,7 @@ def _assert_inner_reconstructs_outer_train(
 
 # Single outer fold execution
 
+
 def run_single_fold(
     train_df: pd.DataFrame,
     test_df: pd.DataFrame,
@@ -785,7 +837,7 @@ def run_single_fold(
     n_iter: int = 50,
     random_state: int = 42,
     save_results: bool = True,
-    **kwargs
+    **kwargs,
 ) -> Dict[str, Any]:
     """
     Execute one outer fold: featurize → inner model selection → evaluate → save.
@@ -800,12 +852,20 @@ def run_single_fold(
     train_cache = get_feature_cache_path(task, dataset, fp_type, "train", fold_idx)
     test_cache = get_feature_cache_path(task, dataset, fp_type, "test", fold_idx)
 
-    X_train, valid_train = compute_fingerprints(train_df["smiles"].tolist(), fp_type, train_cache)
-    X_test, valid_test = compute_fingerprints(test_df["smiles"].tolist(), fp_type, test_cache)
+    X_train, valid_train = compute_fingerprints(
+        train_df["smiles"].tolist(), fp_type, train_cache
+    )
+    X_test, valid_test = compute_fingerprints(
+        test_df["smiles"].tolist(), fp_type, test_cache
+    )
 
     # DataFrames are already cleaned in load_fold, so no invalid SMILES should remain. This assert guards against a stale cache built before cleaning.
-    assert valid_train.all(), "Unexpected invalid SMILES in train after load_fold cleaning"
-    assert valid_test.all(), "Unexpected invalid SMILES in test after load_fold cleaning"
+    assert (
+        valid_train.all()
+    ), "Unexpected invalid SMILES in train after load_fold cleaning"
+    assert (
+        valid_test.all()
+    ), "Unexpected invalid SMILES in test after load_fold cleaning"
 
     # Cast to bool only for KNN/Jaccard distance
     if model_name.startswith("knn") and fp_type in ["ecfp4", "maccs", "rdkit_topo"]:
@@ -822,12 +882,19 @@ def run_single_fold(
 
     if inner_split_strategy == "kfold":
         # Original: k-fold CV on train
-        best_model, best_params, inner_score, inner_train_score, search_object = _inner_cv_sklearn(
-            X_train, y_train, estimator, param_grid,
-            task=task,
-            inner_k=inner_k, scoring=scoring,
-            search_strategy=search_strategy, n_iter=n_iter,
-            random_state=random_state,
+        best_model, best_params, inner_score, inner_train_score, search_object = (
+            _inner_cv_sklearn(
+                X_train,
+                y_train,
+                estimator,
+                param_grid,
+                task=task,
+                inner_k=inner_k,
+                scoring=scoring,
+                search_strategy=search_strategy,
+                n_iter=n_iter,
+                random_state=random_state,
+            )
         )
 
     elif inner_split_strategy == "holdout":
@@ -835,21 +902,29 @@ def run_single_fold(
         # X_inner_train, y_inner_train, X_inner_val, y_inner_val are passed via kwargs from run_nested_cv.
         X_inner_train = kwargs["inner_train_X"]
         y_inner_train = kwargs["inner_train_y"]
-        X_inner_val   = kwargs["inner_val_X"]
-        y_inner_val   = kwargs["inner_val_y"]
+        X_inner_val = kwargs["inner_val_X"]
+        y_inner_val = kwargs["inner_val_y"]
 
-        best_model, best_params, inner_score, inner_train_score, search_object = _inner_holdout_sklearn(
-            X_inner_train, y_inner_train, X_inner_val, y_inner_val,
-            estimator, param_grid,
-            task=task,
-            scoring=scoring, search_strategy=search_strategy,
-            n_iter=n_iter, random_state=random_state,
+        best_model, best_params, inner_score, inner_train_score, search_object = (
+            _inner_holdout_sklearn(
+                X_inner_train,
+                y_inner_train,
+                X_inner_val,
+                y_inner_val,
+                estimator,
+                param_grid,
+                task=task,
+                scoring=scoring,
+                search_strategy=search_strategy,
+                n_iter=n_iter,
+                random_state=random_state,
+            )
         )
 
     elif inner_split_strategy == "random_shuffle":
         # Random shuffle:
         # mix the same outer-training molecules, but keep the same validation proportion as the corresponding OOD holdout split.
-       
+
         # If joint stratification is impossible because some strat are too small, we go back to target-only stratification, then to no stratification.
 
         val_frac = kwargs.get("random_val_fraction", None)
@@ -860,9 +935,7 @@ def run_single_fold(
 
         random_stratify_labels = kwargs.get("random_stratify_labels", None)
 
-        logger.info(
-            f"  Random shuffle holdout: validation fraction = {val_frac:.4f}"
-        )
+        logger.info(f"  Random shuffle holdout: validation fraction = {val_frac:.4f}")
 
         stratify_candidates = []
 
@@ -870,7 +943,7 @@ def run_single_fold(
             if random_stratify_labels is not None:
                 stratify_candidates.append(random_stratify_labels)
 
-        # fallback: stratify by target only
+            # fallback: stratify by target only
             stratify_candidates.append(y_train)
 
         # final fallback: no stratification
@@ -909,12 +982,20 @@ def run_single_fold(
                 f"Last error: {last_error}"
             )
 
-        best_model, best_params, inner_score, inner_train_score, search_object = _inner_holdout_sklearn(
-            X_tr, y_tr, X_vl, y_vl,
-            estimator, param_grid,
-            task=task,
-            scoring=scoring, search_strategy=search_strategy,
-            n_iter=n_iter, random_state=random_state,
+        best_model, best_params, inner_score, inner_train_score, search_object = (
+            _inner_holdout_sklearn(
+                X_tr,
+                y_tr,
+                X_vl,
+                y_vl,
+                estimator,
+                param_grid,
+                task=task,
+                scoring=scoring,
+                search_strategy=search_strategy,
+                n_iter=n_iter,
+                random_state=random_state,
+            )
         )
 
     else:
@@ -995,17 +1076,28 @@ def run_single_fold(
 
     # Save
     if save_results:
-        save_predictions(train_df, train_preds, task, dataset, model_name, fp_type, "train", fold_idx)
-        save_predictions(test_df, test_preds, task, dataset, model_name, fp_type, "test", fold_idx)
-        save_params(best_params, task, dataset, model_name, fp_type, fold_idx,
-                    extra_info={
-                        "inner_split_strategy": inner_split_strategy,
-                        "inner_selection_score": inner_score,
-                        "inner_train_score": inner_train_score,
-                        "train_metrics": train_metrics,
-                        "test_metrics": test_metrics,
-                        "time_seconds": round(elapsed, 1),
-                    })
+        save_predictions(
+            train_df, train_preds, task, dataset, model_name, fp_type, "train", fold_idx
+        )
+        save_predictions(
+            test_df, test_preds, task, dataset, model_name, fp_type, "test", fold_idx
+        )
+        save_params(
+            best_params,
+            task,
+            dataset,
+            model_name,
+            fp_type,
+            fold_idx,
+            extra_info={
+                "inner_split_strategy": inner_split_strategy,
+                "inner_selection_score": inner_score,
+                "inner_train_score": inner_train_score,
+                "train_metrics": train_metrics,
+                "test_metrics": test_metrics,
+                "time_seconds": round(elapsed, 1),
+            },
+        )
 
         _save_model_artifacts(
             fitted_model=best_model,
@@ -1035,6 +1127,7 @@ def run_single_fold(
 
 # Full nested CV (all 3 outer folds)
 
+
 def run_nested_cv(
     task: str,
     dataset: str,
@@ -1049,7 +1142,7 @@ def run_nested_cv(
     random_state: int = 42,
     folds: List[int] = [1, 2, 3],
     save_results: bool = True,
-    **kwargs
+    **kwargs,
 ) -> Dict[str, Any]:
     """
     Run the full nested cross-validation across all outer folds.
@@ -1107,7 +1200,7 @@ def run_nested_cv(
             # load_fold returns (train_df, test_df); the TEST portion is F_i
             _, inner_train_df = load_fold(task, dataset, train_inner_idx)
             _, inner_val_df = load_fold(task, dataset, val_inner_idx)
-            
+
             _assert_inner_reconstructs_outer_train(
                 train_df=train_df,
                 inner_train_df=inner_train_df,
@@ -1130,14 +1223,19 @@ def run_nested_cv(
                 X_inner_val, valid_ivl = compute_fingerprints(
                     inner_val_df["smiles"].tolist(), fp_type, inner_val_cache
                 )
-                assert valid_itr.all() and valid_ivl.all(), \
-                    "Unexpected invalid SMILES in inner holdout subsets"
+                assert (
+                    valid_itr.all() and valid_ivl.all()
+                ), "Unexpected invalid SMILES in inner holdout subsets"
 
                 y_inner_train = inner_train_df["value"].values
                 y_inner_val = inner_val_df["value"].values
 
                 # Cast to bool for KNN/Jaccard distance.
-                if model_name.startswith("knn") and fp_type in ["ecfp4", "maccs", "rdkit_topo"]:
+                if model_name.startswith("knn") and fp_type in [
+                    "ecfp4",
+                    "maccs",
+                    "rdkit_topo",
+                ]:
                     X_inner_train = X_inner_train.astype(bool)
                     X_inner_val = X_inner_val.astype(bool)
 
@@ -1174,7 +1272,7 @@ def run_nested_cv(
                     f"val_fraction={random_val_fraction:.4f}"
                 )
 
-        # Execute this outer fold 
+        # Execute this outer fold
         result = run_single_fold(
             train_df=train_df,
             test_df=test_df,
@@ -1195,7 +1293,7 @@ def run_nested_cv(
         )
         fold_results.append(result)
 
-    # Aggregate test metrics across folds 
+    # Aggregate test metrics across folds
     test_metrics_list = [r["test_metrics"] for r in fold_results]
     aggregated = aggregate_fold_metrics(test_metrics_list)
 
@@ -1208,7 +1306,9 @@ def run_nested_cv(
     # Check hyperparameter stability across folds
     all_params = [r["best_params"] for r in fold_results]
     if len(set(str(p) for p in all_params)) > 1:
-        logger.info("NOTE: Best hyperparameters differ across folds (expected in proper nested CV)")
+        logger.info(
+            "NOTE: Best hyperparameters differ across folds (expected in proper nested CV)"
+        )
         for r in fold_results:
             logger.info(f"  Fold {r['fold']}: {r['best_params']}")
     else:
