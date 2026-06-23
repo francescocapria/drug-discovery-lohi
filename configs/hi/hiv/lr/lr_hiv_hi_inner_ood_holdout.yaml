@@ -8,7 +8,7 @@ fingerprint:
 model:
   name: lr
   fixed:
-    max_iter: 30000
+    max_iter: 60000
     tol: 0.001
     random_state: 42
     solver: saga
