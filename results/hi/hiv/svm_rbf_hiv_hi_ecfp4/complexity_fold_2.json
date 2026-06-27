@@ -1,0 +1,11 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_rbf_hiv_hi_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 2048,
+  "n_support_per_class": [
+    4408,
+    442
+  ],
+  "n_support_total": 4850
+}

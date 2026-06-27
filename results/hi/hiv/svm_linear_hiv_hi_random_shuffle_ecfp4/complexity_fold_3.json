@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_hiv_hi_random_shuffle_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "coefficient_shape": [
+    1,
+    1024
+  ],
+  "n_coefficients": 1024,
+  "n_nonzero_coefficients": 1024,
+  "sparsity": 0.0,
+  "l1_norm": 71.95262687728824,
+  "l2_norm": 2.852697325687211,
+  "approx_margin": 0.35054542625166213,
+  "intercept": [
+    -1.7343804095459134
+  ],
+  "C": 0.05,
+  "class_weight": null,
+  "n_support_per_class": [
+    1107,
+    713
+  ],
+  "n_support_total": 1820
+}

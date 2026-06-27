@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_drd2_hi_random_shuffle_rdkit_desc",
+  "fp_type": "rdkit_desc",
+  "n_features": 217,
+  "coefficient_shape": [
+    1,
+    217
+  ],
+  "n_coefficients": 217,
+  "n_nonzero_coefficients": 146,
+  "sparsity": 0.3271889400921659,
+  "l1_norm": 46.08905216094908,
+  "l2_norm": 5.475647760417853,
+  "approx_margin": 0.18262679481115654,
+  "intercept": [
+    0.41768866525632176
+  ],
+  "C": 1.0,
+  "class_weight": "balanced",
+  "penalty": "deprecated",
+  "l1_ratio": 1.0,
+  "dual": false
+}

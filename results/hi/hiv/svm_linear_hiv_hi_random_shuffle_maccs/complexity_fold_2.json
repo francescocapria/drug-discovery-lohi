@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_hiv_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 163,
+  "sparsity": 0.0239520958083832,
+  "l1_norm": 0.03742608838960845,
+  "l2_norm": 0.007206543905183284,
+  "approx_margin": 138.76277077570472,
+  "intercept": [
+    -1.00006038689545
+  ],
+  "C": 0.05,
+  "class_weight": null,
+  "n_support_per_class": [
+    1261,
+    504
+  ],
+  "n_support_total": 1765
+}

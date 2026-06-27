@@ -12,6 +12,7 @@ model:
     tol: 0.001
     random_state: 42
     solver: saga
+    penalty: elasticnet
   search:
     C:
     - 0.0001

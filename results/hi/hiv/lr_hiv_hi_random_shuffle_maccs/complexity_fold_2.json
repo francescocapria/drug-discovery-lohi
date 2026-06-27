@@ -1,0 +1,24 @@
+{
+  "model_class": "LogisticRegression",
+  "model_name": "lr_hiv_hi_random_shuffle_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 163,
+  "sparsity": 0.0239520958083832,
+  "l1_norm": 27.773206773051882,
+  "l2_norm": 2.8319460726930723,
+  "approx_margin": 0.3531140686761165,
+  "intercept": [
+    -4.753150884660158
+  ],
+  "C": 0.1,
+  "class_weight": null,
+  "penalty": "deprecated",
+  "l1_ratio": 0.0,
+  "dual": false
+}

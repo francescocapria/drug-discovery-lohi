@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_hiv_hi_inner_ood_holdout_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 1024,
+  "effective_depth": 30,
+  "n_nodes": 239,
+  "n_leaves": 120,
+  "n_features_used": 106,
+  "used_feature_fraction": 0.103515625,
+  "criterion": "gini",
+  "max_depth": 30,
+  "max_features": null,
+  "min_samples_leaf": 5,
+  "min_samples_split": 20,
+  "ccp_alpha": 0.001,
+  "class_weight": "balanced",
+  "feature_min_depth_mean": 13.169811320754716,
+  "feature_min_depth_std": 7.949690510308131,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 29
+}

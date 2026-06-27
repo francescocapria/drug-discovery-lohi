@@ -1,0 +1,22 @@
+{
+  "fold": 3,
+  "best_params": {},
+  "inner_split_strategy": "kfold",
+  "inner_selection_score": 0.874,
+  "inner_train_score": 0.874,
+  "train_metrics": {
+    "pr_auc": 0.874,
+    "roc_auc": 0.5,
+    "bedroc": 0.8356,
+    "f1_at_05": 0.9328,
+    "positive_rate": 0.874
+  },
+  "test_metrics": {
+    "pr_auc": 0.5243,
+    "roc_auc": 0.5,
+    "bedroc": 0.6035,
+    "f1_at_05": 0.6879,
+    "positive_rate": 0.5243
+  },
+  "time_seconds": 1.0
+}

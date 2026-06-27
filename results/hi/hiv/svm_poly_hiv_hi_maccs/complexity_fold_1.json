@@ -1,0 +1,11 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_poly_hiv_hi_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "n_support_per_class": [
+    1256,
+    590
+  ],
+  "n_support_total": 1846
+}

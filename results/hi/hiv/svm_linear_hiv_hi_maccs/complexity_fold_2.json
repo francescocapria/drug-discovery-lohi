@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_hiv_hi_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "coefficient_shape": [
+    1,
+    167
+  ],
+  "n_coefficients": 167,
+  "n_nonzero_coefficients": 162,
+  "sparsity": 0.029940119760479056,
+  "l1_norm": 0.02226096626882343,
+  "l2_norm": 0.0029653741440948452,
+  "approx_margin": 337.225574719254,
+  "intercept": [
+    -1.0000697731863177
+  ],
+  "C": 0.001,
+  "class_weight": null,
+  "n_support_per_class": [
+    774,
+    504
+  ],
+  "n_support_total": 1278
+}

@@ -3,7 +3,7 @@ Fingerprint computation
 
 All functions return NumPy arrays of shape (n_molecules, n_features).
 
-Computed fingerprints can be optionally cached on disk in the features/ folder 
+Computed fingerprints can be optionally cached on disk in the features/ folder
 
 Supported fingerprint types:
 - ECFP4 (Morgan fingerprints, radius=2)
@@ -47,7 +47,9 @@ def smiles_to_mols(smiles_list: List[str]):
     return mols, np.asarray(valid_mask, dtype=bool)
 
 
-def compute_ecfp4(smiles_list: List[str], n_bits: int = 2048) -> tuple[np.ndarray, np.ndarray]:
+def compute_ecfp4(
+    smiles_list: List[str], n_bits: int = 1024
+) -> tuple[np.ndarray, np.ndarray]:
     """Compute ECFP4 (Morgan radius=2) fingerprints."""
     mols, valid_mask = smiles_to_mols(smiles_list)
 

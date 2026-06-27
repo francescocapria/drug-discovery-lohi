@@ -1,0 +1,26 @@
+{
+  "model_class": "SVC",
+  "model_name": "svm_linear_hiv_hi_ecfp4",
+  "fp_type": "ecfp4",
+  "n_features": 2048,
+  "coefficient_shape": [
+    1,
+    2048
+  ],
+  "n_coefficients": 2048,
+  "n_nonzero_coefficients": 2047,
+  "sparsity": 0.00048828125,
+  "l1_norm": 117.71863142741495,
+  "l2_norm": 3.3404171241219087,
+  "approx_margin": 0.2993638108183477,
+  "intercept": [
+    -1.5528789537547598
+  ],
+  "C": 0.05,
+  "class_weight": null,
+  "n_support_per_class": [
+    1203,
+    563
+  ],
+  "n_support_total": 1766
+}

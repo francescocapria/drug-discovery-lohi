@@ -1,0 +1,22 @@
+{
+  "model_class": "DecisionTreeClassifier",
+  "model_name": "dt_drd2_hi_inner_ood_holdout_maccs",
+  "fp_type": "maccs",
+  "n_features": 167,
+  "effective_depth": 15,
+  "n_nodes": 597,
+  "n_leaves": 299,
+  "n_features_used": 100,
+  "used_feature_fraction": 0.5988023952095808,
+  "criterion": "gini",
+  "max_depth": 15,
+  "max_features": "log2",
+  "min_samples_leaf": 2,
+  "min_samples_split": 5,
+  "ccp_alpha": 0.0001,
+  "class_weight": null,
+  "feature_min_depth_mean": 6.77,
+  "feature_min_depth_std": 2.6976100533620495,
+  "feature_min_depth_min": 0,
+  "feature_min_depth_max": 12
+}
