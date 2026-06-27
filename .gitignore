@@ -69,6 +69,7 @@ MANIFEST
 data/raw/
 data/processed/
 data/interim/
+results/
 
 # =========================
 # Results / outputs
