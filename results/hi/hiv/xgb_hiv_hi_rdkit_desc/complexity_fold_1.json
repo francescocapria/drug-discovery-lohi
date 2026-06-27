@@ -1,6 +1,0 @@
-{
-  "model_class": "XGBClassifier",
-  "model_name": "xgb_hiv_hi_rdkit_desc",
-  "fp_type": "rdkit_desc",
-  "n_features": 217
-}

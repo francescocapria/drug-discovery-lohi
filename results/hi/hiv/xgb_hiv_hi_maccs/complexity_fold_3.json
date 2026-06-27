@@ -1,6 +1,0 @@
-{
-  "model_class": "XGBClassifier",
-  "model_name": "xgb_hiv_hi_maccs",
-  "fp_type": "maccs",
-  "n_features": 167
-}

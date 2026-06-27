@@ -1,6 +1,0 @@
-{
-  "model_class": "XGBClassifier",
-  "model_name": "xgb_hiv_hi_ecfp4",
-  "fp_type": "ecfp4",
-  "n_features": 2048
-}
