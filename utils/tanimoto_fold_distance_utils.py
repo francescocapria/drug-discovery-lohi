@@ -73,7 +73,7 @@ class TanimotoDistanceConfig:
     )
 
     fp_type: str = "ecfp4"
-    expected_ecfp4_bits: int = 2048
+    expected_ecfp4_bits: int = 1024
 
     k_values: list[int] = field(
         default_factory=lambda: [10, 20, 50, 100, 150, 200, 250, 500]
