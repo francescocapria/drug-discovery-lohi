@@ -724,14 +724,26 @@ def load_list_b(cfg: TanimotoDistanceConfig) -> pd.DataFrame:
 
 
 def nn_max_sim(X: np.ndarray, Y: np.ndarray, chunk: int = 512) -> np.ndarray:
-    """For each row in X, return max Tanimoto similarity to any row in Y."""
-    X = X.astype(np.float32, copy=False)
-    Y = Y.astype(np.float32, copy=False)
+    """
+    For each row in X, return max Tanimoto similarity to any row in Y.
 
-    sx = X.sum(axis=1)
-    sy = Y.sum(axis=1)
+    Binary fingerprints are cast to int32 before matrix multiplication to avoid
+    platform-dependent float/uint8 BLAS warnings or overflow issues.
+    """
+    X = np.asarray(X, dtype=np.int32)
+    Y = np.asarray(Y, dtype=np.int32)
 
     n = X.shape[0]
+
+    if n == 0:
+        return np.array([], dtype=np.float32)
+
+    if Y.shape[0] == 0:
+        return np.full(n, np.nan, dtype=np.float32)
+
+    sx = X.sum(axis=1, dtype=np.int32)
+    sy = Y.sum(axis=1, dtype=np.int32)
+
     out = np.zeros(n, dtype=np.float32)
 
     for i in range(0, n, chunk):
@@ -740,14 +752,20 @@ def nn_max_sim(X: np.ndarray, Y: np.ndarray, chunk: int = 512) -> np.ndarray:
 
         dots = block @ Y.T
         denom = sb[:, None] + sy[None, :] - dots
+        valid = denom > 0
 
-        with np.errstate(divide="ignore", invalid="ignore"):
-            sim = np.where(denom > 0, dots / denom, 0.0)
+        sim = np.zeros(dots.shape, dtype=np.float32)
+
+        np.divide(
+            dots.astype(np.float32, copy=False),
+            denom.astype(np.float32, copy=False),
+            out=sim,
+            where=valid,
+        )
 
         out[i : i + chunk] = sim.max(axis=1)
 
     return out
-
 
 def nn_distances(XA: np.ndarray, XB: np.ndarray) -> dict[str, Any]:
     """Symmetric nearest-neighbour Tanimoto distance, restricted-space aware."""
@@ -809,9 +827,12 @@ def complete_pairwise_distance(
 
     Computes the mean Tanimoto distance over all valid pairs.
     Pairs with union=0 are excluded, and valid_pair_fraction is reported.
+
+    Binary fingerprints are cast to int32 before matrix multiplication to avoid
+    platform-dependent float/uint8 BLAS warnings or overflow issues.
     """
-    XA = XA.astype(np.float32, copy=False)
-    XB = XB.astype(np.float32, copy=False)
+    XA = np.asarray(XA, dtype=np.int32)
+    XB = np.asarray(XB, dtype=np.int32)
 
     sum_dist = 0.0
     n_valid = 0
@@ -823,23 +844,30 @@ def complete_pairwise_distance(
             f"{XA.shape[0]} x {XB.shape[0]} = {n_total:,} pairs"
         )
 
-    y_sum = XB.sum(axis=1)
+    y_sum = XB.sum(axis=1, dtype=np.int32)
 
     for start in range(0, XA.shape[0], chunk):
         xb = XA[start : start + chunk]
-        x_sum = xb.sum(axis=1)
+        x_sum = xb.sum(axis=1, dtype=np.int32)
 
         inter = xb @ XB.T
         union = x_sum[:, None] + y_sum[None, :] - inter
 
         valid = union > 0
 
-        sim = np.zeros_like(inter, dtype=np.float32)
-        np.divide(inter, union, out=sim, where=valid)
+        if not valid.any():
+            continue
 
-        dist = 1.0 - sim
+        sim = np.zeros(inter.shape, dtype=np.float32)
 
-        sum_dist += float(dist[valid].sum())
+        np.divide(
+            inter.astype(np.float32, copy=False),
+            union.astype(np.float32, copy=False),
+            out=sim,
+            where=valid,
+        )
+
+        sum_dist += float((1.0 - sim[valid]).sum())
         n_valid += int(valid.sum())
 
     mean_dist = sum_dist / n_valid if n_valid > 0 else np.nan
